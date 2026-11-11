@@ -1,0 +1,1570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HueDesk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060607;--p0:#0e0e10;--p1:#141417;--p2:#1c1c21;--p3:#26262d;--p4:#33333c;--ln:#26262d;--ln2:#3a3a44;
+  --tx:#e4e4ea;--tx2:#9a9aa6;--tx3:#60606b;
+  --amb:#ffb31f;--sel:#ffd21a;--red:#ff4747;--grn:#3ee07a;--blu:#4aa3ff;--cya:#3fdbe8;--mag:#d65cff;--org:#ff8c33;
+  --fc:'Barlow Condensed','Roboto Condensed','Arial Narrow',system-ui,sans-serif;
+  --fm:'JetBrains Mono','IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+input[type=range],input[type=checkbox]{accent-color:var(--amb)}
+#cueTitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#cueMode{display:none}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:500 14px/1.2 var(--fc);-webkit-user-select:none;user-select:none}
+body{overflow:auto}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:500 14px var(--fc);color:var(--tx);background:#0a0a0c;border:1px solid var(--ln2);border-radius:3px;padding:5px 7px;-webkit-user-select:text;user-select:text}
+input[type=number],input[type=time]{font-family:var(--fm);font-size:13px}
+textarea{font-family:var(--fm);font-size:13px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amb)}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#2c2c34;border-radius:4px}::-webkit-scrollbar-track{background:transparent}
+
+#app{display:grid;height:100vh;min-height:780px;min-width:1240px;grid-template-columns:minmax(0,1fr) 384px;grid-template-rows:38px minmax(200px,1fr) 190px 238px 52px;gap:4px;padding:4px}
+#top{grid-column:1/3;grid-row:1}
+#fixtures{grid-column:1;grid-row:2}#prog{grid-column:2;grid-row:2}
+#pools{grid-column:1;grid-row:3}#cues{grid-column:2;grid-row:3}
+#execs{grid-column:1;grid-row:4}#masters{grid-column:2;grid-row:4}
+#cmd{grid-column:1/3;grid-row:5}
+
+.win{background:var(--p0);border:1px solid var(--ln);border-radius:4px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.wh{height:24px;flex:none;display:flex;align-items:center;gap:8px;padding:0 8px;background:linear-gradient(#212127,#18181c);border-bottom:1px solid #000;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--amb)}
+.wh .whinfo{margin-left:auto;color:var(--tx2);font-weight:500;letter-spacing:.04em;text-transform:none;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wh .tabs{display:flex;gap:2px;margin-left:6px}
+.wh .tabs button{background:#0d0d10;border:1px solid var(--ln2);border-radius:2px;padding:1px 8px;font-size:12px;letter-spacing:.06em;color:var(--tx2)}
+.wh .tabs button.on{color:#000;background:var(--amb);border-color:var(--amb)}
+.wh .hb{background:#0d0d10;border:1px solid var(--ln2);border-radius:2px;padding:1px 7px;font-size:12px;letter-spacing:.06em;color:var(--tx)}
+.wh .hb:hover{border-color:var(--amb)}
+.wb{flex:1;min-height:0;overflow:auto;padding:6px}
+.flag{display:none;padding:0 6px;border-radius:2px;font-size:11px;letter-spacing:.1em;color:#000}
+.flag.on{display:inline-block}
+#fBlind{background:var(--blu)}#fHl{background:var(--sel)}
+
+/* top bar */
+#top{display:flex;align-items:center;gap:12px;padding:0 10px;background:linear-gradient(#1b1b20,#111114);border:1px solid var(--ln);border-radius:4px}
+.brand{display:flex;align-items:baseline;gap:5px;font-weight:700;letter-spacing:.12em}
+.brand .lg{background:var(--amb);color:#000;padding:1px 6px;border-radius:2px;font-size:15px}
+.brand b{font-size:17px}
+.brand small{color:var(--tx3);font-size:11px;letter-spacing:.18em;font-weight:600}
+.showname{color:var(--tx);font-size:16px;font-weight:600;padding-left:12px;border-left:1px solid var(--ln2);cursor:pointer}
+.stat{display:flex;align-items:center;gap:6px;color:var(--tx2);font-size:13px;white-space:nowrap}
+.led{width:9px;height:9px;border-radius:50%;background:#444;box-shadow:inset 0 0 2px #000}
+.led.ok{background:var(--grn);box-shadow:0 0 8px var(--grn)}
+.led.demo{background:var(--cya);box-shadow:0 0 8px var(--cya)}
+.led.err{background:var(--red);box-shadow:0 0 8px var(--red)}
+.led.busy{background:var(--amb);animation:blink .6s infinite alternate}
+@keyframes blink{to{opacity:.25}}
+.meter .bar{width:90px;height:8px;background:#0a0a0c;border:1px solid var(--ln2);border-radius:2px;overflow:hidden}
+.meter .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--grn),var(--amb) 75%,var(--red))}
+.meter span{font:12px var(--fm)}
+.spacer{flex:1}
+.tb{background:#0d0d10;border:1px solid var(--ln2);border-radius:3px;padding:3px 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.tb:hover{border-color:var(--amb);color:var(--amb)}
+.clock{font:600 15px var(--fm);color:var(--amb);min-width:76px;text-align:right}
+
+/* fixtures */
+.room{margin-bottom:8px}
+.roomh{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);text-transform:uppercase;letter-spacing:.14em;margin:0 0 4px;cursor:pointer;font-weight:600}
+.roomh::after{content:'';flex:1;height:1px;background:var(--ln)}
+.roomh:hover{color:var(--sel)}
+.fxs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:4px}
+.fx{position:relative;height:60px;border-radius:3px;background:#09090b;border:1px solid #2b2b33;overflow:hidden;cursor:pointer}
+.fx .fxc{position:absolute;inset:0;background:var(--c,#000);opacity:var(--o,0)}
+.fx::after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.25),transparent 35%,transparent 45%,rgba(0,0,0,.6));pointer-events:none}
+.fx span,.fx i{position:absolute;z-index:1}
+.fx .fxn{top:3px;left:5px;font:600 11px var(--fm);color:#fff;text-shadow:0 0 3px #000}
+.fx .fxd{top:3px;right:5px;font:600 11px var(--fm);color:#fff;text-shadow:0 0 3px #000}
+.fx .fxname{left:5px;right:5px;bottom:9px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px #000}
+.fx .fxlamp{left:0;right:0;bottom:0;height:5px;background:var(--l,#000);border-top:1px solid #000}
+.fx .fxe{top:17px;right:5px;font:600 9px var(--fm);color:var(--grn);text-shadow:0 0 3px #000;display:none}
+.fx.hasfx .fxe{display:block}
+.fx.prog .fxd{background:var(--red);color:#fff;padding:0 3px;border-radius:2px;text-shadow:none}
+.fx.prog{border-color:#6a2626}
+.fx.rel .fxn{color:var(--tx2)}
+.fx.unr{opacity:.4}
+.fx.sel{border-color:var(--sel);box-shadow:inset 0 0 0 1px var(--sel),0 0 6px rgba(255,210,26,.35)}
+.sheet{width:100%;border-collapse:collapse;font-size:13px}
+.sheet th{position:sticky;top:-6px;background:var(--p2);color:var(--amb);text-align:left;font-weight:600;letter-spacing:.06em;padding:3px 6px;border-bottom:1px solid #000;font-size:12px;text-transform:uppercase}
+.sheet td{padding:2px 6px;border-bottom:1px solid #18181c;white-space:nowrap}
+.sheet td.num{font-family:var(--fm);font-size:12px}
+.sheet tr{cursor:pointer}
+.sheet tr.sel td{background:rgba(255,210,26,.12)}
+.sheet td.pv{color:var(--red)}
+.sheet .sw{display:inline-block;width:26px;height:12px;border-radius:2px;vertical-align:middle;margin-right:6px;border:1px solid #000}
+
+/* programmer */
+.pgw{display:flex;flex-direction:column;gap:6px}
+.pgtop{display:flex;gap:8px;align-items:stretch}
+#wheel{width:132px;height:132px;cursor:crosshair;border-radius:50%;flex:none}
+#ctbar{width:20px;height:132px;cursor:ns-resize;border-radius:3px;border:1px solid #000;flex:none}
+.pgside{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+.swatch{height:30px;border-radius:3px;border:1px solid var(--ln2);background:#000;position:relative;overflow:hidden}
+.swatch b{position:absolute;right:5px;top:7px;font:600 11px var(--fm);color:#fff;text-shadow:0 0 3px #000}
+.readout{font:12px/1.45 var(--fm);color:var(--tx2);min-height:52px}
+.readout b{color:var(--tx);font-weight:600}
+.readout .pv{color:var(--red)}
+.dims{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.dims button,.pgbtns button{background:var(--p2);border:1px solid var(--ln2);border-radius:3px;padding:3px 0;font-size:12px;letter-spacing:.05em}
+.dims button:hover,.pgbtns button:hover{border-color:var(--amb)}
+.encs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.enc{background:var(--p1);border:1px solid var(--ln);border-radius:4px;display:flex;flex-direction:column;align-items:center;padding:3px 0 4px;cursor:ns-resize;touch-action:none}
+.enc:hover{border-color:var(--ln2)}
+.enc .el{font-size:11px;letter-spacing:.14em;color:var(--tx2);font-weight:600}
+.enc svg{width:44px;height:44px}
+.enc .eb{fill:none;stroke:#2a2a32;stroke-width:5;stroke-linecap:round}
+.enc .ev{fill:none;stroke:var(--amb);stroke-width:5;stroke-linecap:round}
+.enc.pv .ev{stroke:var(--red)}
+.enc .evl{font:600 12px var(--fm);margin-top:-3px}
+.enc.pv .evl{color:var(--red)}
+.pgbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.pgbtns button.on{background:var(--amb);color:#000;border-color:var(--amb)}
+
+/* pools */
+#pools .wb{display:flex;gap:5px;padding:5px}
+.pool{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--p1);border:1px solid var(--ln);border-radius:3px}
+.pool.wide{flex:1.35}
+.poh{flex:none;padding:3px 7px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--pc);border-bottom:2px solid var(--pc);background:#111114}
+.pg{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));grid-auto-rows:44px;gap:3px;padding:4px;align-content:start}
+.pt{position:relative;border-radius:3px;background:var(--p3);border:1px solid #3a3a44;cursor:pointer;overflow:hidden;display:flex;align-items:flex-end;padding:0 4px 3px}
+.pt:hover{border-color:var(--pc)}
+.pt .ps{position:absolute;top:2px;left:4px;font:10px var(--fm);color:var(--tx3);z-index:1}
+.pt .pn{position:relative;z-index:1;font-size:12px;font-weight:600;line-height:1.05;max-height:26px;overflow:hidden;text-shadow:0 1px 2px #000}
+.pt.empty{background:#0f0f12;border:1px dashed #26262e}
+.pt.act{border-color:var(--pc);box-shadow:inset 0 0 0 1px var(--pc),0 0 8px color-mix(in srgb,var(--pc) 50%,transparent)}
+.pt.act::before{content:'';position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--pc);box-shadow:0 0 6px var(--pc);z-index:1}
+.pt .psw{position:absolute;inset:0}
+.pt .psw::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,.65))}
+.pt .pfx{position:absolute;top:2px;right:4px;font:10px var(--fm);color:var(--grn)}
+.armed-store .pt.empty{border-color:var(--red)}
+
+/* cue list */
+.cuetbl{width:100%;border-collapse:collapse;font-size:13px}
+.cuetbl th{position:sticky;top:0;background:var(--p2);color:var(--amb);text-align:left;font-weight:600;letter-spacing:.06em;padding:3px 5px;font-size:12px;text-transform:uppercase;border-bottom:1px solid #000;z-index:1}
+.cuetbl td{padding:3px 5px;border-bottom:1px solid #18181c;white-space:nowrap}
+.cuetbl td.cn,.cuetbl td.cf,.cuetbl td.cd,.cuetbl td.cc{font-family:var(--fm);font-size:12px}
+.cuetbl td.cnm{width:100%;max-width:0;overflow:hidden;text-overflow:ellipsis}
+.cuetbl td.cm{width:14px;color:var(--grn);padding-right:0}
+.cuetbl tr{cursor:pointer}
+.cuetbl tr:hover td{background:#17171b}
+.cuetbl tr.csel td{background:rgba(74,163,255,.14)}
+.cuetbl tr.ccur td{color:#fff}
+.cuetbl tr.ccur td.cm::before{content:'\25B6'}
+.cuetbl tr.cfade td.cm::before{content:'\25B7'}
+.cuetbl .fxb{font-size:10px;color:var(--grn);border:1px solid var(--grn);border-radius:2px;padding:0 2px;margin-left:3px}
+.cuetbl td.empty{color:var(--tx3);white-space:normal;padding:14px 8px;text-align:center;font-size:13px;line-height:1.4}
+.dim{color:var(--tx3)}
+.inl{width:100%;padding:1px 4px;font-size:13px}
+#cues .wb{padding:0}
+
+/* executors */
+#execRow{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;padding:5px;height:100%}
+.exec{display:flex;flex-direction:column;background:var(--p1);border:1px solid var(--ln);border-radius:3px;min-width:0;overflow:hidden}
+.exec.selx{border-color:var(--amb);box-shadow:inset 0 0 0 1px var(--amb)}
+.exh{flex:none;padding:3px 5px 4px;background:#101013;border-bottom:1px solid #000;cursor:pointer;height:66px;display:flex;flex-direction:column;gap:1px}
+.exl1{display:flex;align-items:center;gap:4px}
+.exn{font:600 11px var(--fm);color:#000;background:var(--tx3);border-radius:2px;padding:0 4px}
+.exec.on .exn{background:var(--grn)}
+.exec.offing .exn{background:var(--org)}
+.exlab{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.exmode{font-size:10px;letter-spacing:.08em;color:var(--tx3)}
+.excur{font-size:13px;color:var(--grn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:16px}
+.excur.off{color:var(--tx3)}
+.exnext{font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exbar{height:3px;background:#000;border-radius:2px;margin-top:auto;overflow:hidden}
+.exbar i{display:block;height:100%;width:0;background:var(--grn)}
+.exb{flex:1;display:flex;gap:4px;padding:5px;min-height:0}
+.exbtns{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.xb{flex:1;background:var(--p3);border:1px solid #42424c;border-radius:3px;font-size:13px;font-weight:600;letter-spacing:.06em;padding:0;min-height:0}
+.xb:hover{border-color:var(--tx2)}
+.xb.go{background:#123d22;border-color:#1f6b3a;color:#bfffd5}
+.xb.go:hover{border-color:var(--grn)}
+.xb.on{background:var(--amb);color:#000;border-color:var(--amb)}
+.xb.fl.on{background:#fff;color:#000}
+
+/* faders */
+.fader{width:36px;flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;touch-action:none}
+.ftrack{position:relative;flex:1;width:100%;background:linear-gradient(90deg,transparent 15px,#050506 15px,#050506 21px,transparent 21px);cursor:pointer}
+.ftrack::before{content:'';position:absolute;left:4px;right:4px;top:7px;bottom:7px;background:repeating-linear-gradient(transparent 0 calc(10% - 1px),#2a2a31 calc(10% - 1px) 10%)}
+.ffill{position:absolute;left:15px;width:6px;bottom:7px;height:calc(var(--v,0)*(100% - 14px));background:var(--fc2,var(--amb));border-radius:1px;box-shadow:0 0 6px var(--fc2,var(--amb))}
+.fcap{position:absolute;left:1px;right:1px;height:14px;bottom:calc(var(--v,0)*(100% - 14px));background:linear-gradient(#55555f,#2e2e35);border:1px solid #6a6a75;border-radius:2px;box-shadow:0 2px 3px rgba(0,0,0,.6)}
+.fcap::after{content:'';position:absolute;left:3px;right:3px;top:6px;height:1px;background:#ddd}
+.fval{font:600 11px var(--fm);color:var(--tx)}
+
+/* masters */
+.mst{display:flex;gap:8px;padding:6px 8px}
+.mcol{display:flex;flex-direction:column;align-items:center;gap:3px}
+.mcol .fader{flex:1}
+.mlab{font-size:11px;letter-spacing:.12em;color:var(--tx2);font-weight:600}
+.sms{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+.sm{flex:1;background:var(--p1);border:1px solid var(--ln);border-radius:3px;padding:5px 7px;display:flex;flex-direction:column;gap:4px;position:relative}
+.smh{font-size:11px;letter-spacing:.14em;color:var(--tx2);font-weight:600}
+.smv{font:600 26px var(--fm);color:var(--cya);cursor:ns-resize;line-height:1;touch-action:none}
+.smv small{font:500 11px var(--fc);color:var(--tx2);letter-spacing:.1em;margin-left:4px}
+.smb{display:grid;grid-template-columns:2fr 1fr 1fr;gap:3px;margin-top:auto}
+.smb button{background:var(--p3);border:1px solid #42424c;border-radius:3px;font-size:12px;font-weight:600;padding:3px 0}
+.smb button:hover{border-color:var(--cya)}
+.smled{position:absolute;top:7px;right:8px;width:9px;height:9px;border-radius:50%;background:#123}
+.smled.on{background:var(--cya);box-shadow:0 0 8px var(--cya)}
+.bo{display:flex;flex-direction:column;gap:6px;width:84px}
+#boBtn{flex:1;background:#2a0d0d;border:1px solid #6b1f1f;border-radius:4px;color:#ffb3b3;font-size:15px;font-weight:700;letter-spacing:.1em}
+#boBtn.on{background:var(--red);color:#fff;animation:blink .5s infinite alternate}
+.bo .mini{background:var(--p2);border:1px solid var(--ln2);border-radius:3px;font-size:12px;padding:4px 0;color:var(--tx2)}
+
+/* command line */
+#cmd{flex-direction:row;align-items:center;gap:8px;padding:0 6px}
+.cl{flex:1;display:flex;align-items:center;gap:6px;min-width:0;background:#050506;border:1px solid var(--ln2);border-radius:3px;height:36px;padding:0 8px}
+.prompt{font:600 13px var(--fm);color:var(--amb);white-space:nowrap}
+.prompt.armed{color:var(--red)}
+#cmdIn{flex:1;min-width:120px;background:transparent;border:0;font:13px var(--fm);color:#fff;padding:0}
+.fb{font:12px var(--fm);color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46%}
+.fb.ok{color:var(--grn)}.fb.warn{color:var(--amb)}.fb.err{color:var(--red)}
+.keys{display:flex;gap:3px;align-items:center}
+.k{height:36px;min-width:52px;padding:0 7px;background:var(--p3);border:1px solid #42424c;border-radius:3px;font-size:13px;font-weight:700;letter-spacing:.06em}
+.k:hover{border-color:var(--tx2)}
+.k.red{background:#3a1010;border-color:#7a2323;color:#ffb0b0}
+.k.org{background:#3a2410;border-color:#7a4a23;color:#ffd0a0}
+.k.amb{background:#3a300c;border-color:#7a6418;color:#ffe08a}
+.k.on{background:var(--red);border-color:var(--red);color:#fff}
+.k.org.on{background:var(--org);border-color:var(--org);color:#000}
+.k.lit{background:var(--sel);color:#000;border-color:var(--sel)}
+.k.blu.lit{background:var(--blu)}
+.ksep{width:6px}
+
+
+/* guided tour */
+#tour{position:fixed;inset:0;z-index:70}
+#tour[hidden]{display:none}
+.tspot{position:fixed;border:2px solid var(--amb);border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.74),0 0 24px rgba(255,179,31,.45);transition:all .28s ease;pointer-events:none}
+.tspot.none{border-color:transparent;box-shadow:0 0 0 9999px rgba(0,0,0,.74)}
+.tcard{position:fixed;width:450px;max-width:calc(100vw - 24px);background:var(--p1);border:1px solid var(--amb);border-radius:6px;box-shadow:0 18px 50px rgba(0,0,0,.7);padding:14px 16px 12px;transition:left .28s ease,top .28s ease;-webkit-user-select:text;user-select:text}
+.tcard .tstep{font:600 11px var(--fm);color:var(--tx3);letter-spacing:.08em}
+.tcard .tdots{display:flex;gap:3px;margin:6px 0 8px}
+.tcard .tdots i{flex:1;height:3px;border-radius:2px;background:var(--p4)}
+.tcard .tdots i.on{background:var(--amb)}
+.tcard h3{margin:0 0 6px;font-size:20px;letter-spacing:.04em;color:var(--amb)}
+.tcard .tbody{font-size:15px;line-height:1.45;color:var(--tx)}
+.tcard .tbody p{margin:0 0 8px}
+.tcard .tbody ul{margin:0 0 8px;padding-left:18px}
+.tcard .tbody li{margin-bottom:3px}
+.tcard .tbody code{font:12px var(--fm);background:#000;border:1px solid var(--ln2);padding:0 4px;border-radius:2px;color:var(--sel)}
+.tcard .tbody b{color:#fff}
+.tfoot{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--ln)}
+.tfoot .tno{display:flex;align-items:center;gap:5px;color:var(--tx2);font-size:13px;cursor:pointer}
+.tfoot .tno[hidden]{display:none}
+.tfoot .sp{margin-right:auto}
+.tfoot .btn{white-space:nowrap}
+.tfoot .tno{white-space:nowrap}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal[hidden]{display:none}
+.mbox{background:var(--p1);border:1px solid var(--ln2);border-radius:5px;width:min(520px,94vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal.wide .mbox{width:min(860px,96vw)}
+.mh{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #000;background:linear-gradient(#222228,#19191d);color:var(--amb);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:14px}
+.mh .mx{margin-left:auto;background:none;border:0;color:var(--tx2);font-size:18px;line-height:1}
+.mb{padding:12px;overflow:auto;-webkit-user-select:text;user-select:text}
+.mb h4{margin:4px 0 8px;color:var(--amb);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.sec{background:var(--p0);border:1px solid var(--ln);border-radius:4px;padding:10px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap}
+.row label{width:110px;color:var(--tx2);font-size:13px}
+.row input:not([type=checkbox]):not([type=color]),.row select{flex:1;min-width:90px}
+.hint{color:var(--tx2);font-size:13px;line-height:1.4;margin:2px 0 8px}
+.hint.err{color:var(--red)}.hint.ok{color:var(--grn)}
+.btn{background:var(--p3);border:1px solid #474752;border-radius:3px;padding:5px 12px;font-size:13px;font-weight:600;letter-spacing:.05em}
+.btn:hover{border-color:var(--amb)}
+.btn.pri{background:var(--amb);color:#000;border-color:var(--amb)}
+.btn.dng{background:#3a1010;border-color:#7a2323;color:#ffb0b0}
+.mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.ptbl{width:100%;border-collapse:collapse;font-size:13px}
+.ptbl td,.ptbl th{padding:3px 6px;border-bottom:1px solid var(--ln);text-align:left}
+.ptbl th{color:var(--amb);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.days{display:flex;gap:2px}
+.days button{width:26px;background:var(--p2);border:1px solid var(--ln2);border-radius:2px;font-size:12px;padding:3px 0}
+.days button.on{background:var(--amb);color:#000;border-color:var(--amb)}
+.help{font-size:14px;line-height:1.5;color:var(--tx)}
+.help code{font:12px var(--fm);background:#000;border:1px solid var(--ln2);padding:0 4px;border-radius:2px;color:var(--sel)}
+.help table{border-collapse:collapse;width:100%;margin:6px 0 12px}
+.help td{padding:3px 8px;border-bottom:1px solid var(--ln);vertical-align:top}
+.help td:first-child{white-space:nowrap}
+.help ol,.help ul{padding-left:20px;margin:6px 0 12px}
+#fxPrev{width:100%;height:46px;background:#000;border-radius:3px;border:1px solid var(--ln2)}
+.welcome{text-align:center;padding:10px 6px}
+.welcome h2{margin:0 0 8px;font-size:26px;letter-spacing:.06em}
+.welcome p{color:var(--tx2);font-size:15px;line-height:1.45;margin:0 0 16px}
+.welcome .btn{font-size:15px;padding:9px 18px;margin:0 4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="brand"><span class="lg">HUE</span><b>DESK</b><small>LIGHTING CONSOLE</small></div>
+    <div class="showname" id="showName" title="Rename show"></div>
+    <div class="stat"><i class="led" id="bridgeLed"></i><span id="bridgeTxt">No bridge</span></div>
+    <div class="stat meter" title="Commands sent to the bridge per second and number of lights waiting for an update"><span>OUT</span><div class="bar"><i id="rateBar"></i></div><span id="rateTxt">0/s</span><span id="queueTxt" style="color:var(--tx3)">Q0</span></div>
+    <div class="spacer"></div>
+    <button class="tb" data-act="agenda" title="Time-of-day automation">Agenda</button>
+    <button class="tb" data-act="setup">Setup</button>
+    <button class="tb" data-act="export" title="Download show file">Export</button>
+    <button class="tb" data-act="import" title="Load a show file">Import</button>
+    <button class="tb" data-act="help">Help</button>
+    <div class="clock" id="clock">00:00:00</div>
+  </header>
+
+  <section id="fixtures" class="win">
+    <div class="wh"><span>Fixtures</span><div class="tabs"><button data-view="grid" class="on">Layout</button><button data-view="sheet">Sheet</button></div><span class="whinfo" id="selInfo"></span></div>
+    <div class="wb" id="fixGrid"></div>
+    <div class="wb" id="fixSheet" hidden></div>
+  </section>
+
+  <section id="prog" class="win">
+    <div class="wh"><span>Programmer</span><span class="flag" id="fBlind">BLIND</span><span class="flag" id="fHl">HIGHLIGHT</span><span class="whinfo" id="progInfo"></span></div>
+    <div class="wb pgw">
+      <div class="pgtop">
+        <canvas id="wheel" width="264" height="264"></canvas>
+        <canvas id="ctbar" width="40" height="264" title="Colour temperature: cool at the top, warm at the bottom"></canvas>
+        <div class="pgside">
+          <div class="swatch" id="swatch"><b id="swatchTxt"></b></div>
+          <div class="readout" id="readout"></div>
+          <div class="dims" id="dimBtns"></div>
+        </div>
+      </div>
+      <div class="encs">
+        <div class="enc" data-enc="dim"></div><div class="enc" data-enc="hue"></div><div class="enc" data-enc="sat"></div><div class="enc" data-enc="ct"></div><div class="enc" data-enc="fade"></div>
+      </div>
+      <div class="pgbtns">
+        <button id="alignBtn" title="Fan values across the selection when turning encoders">ALIGN OFF</button>
+        <button data-cmd="ko" title="Remove selected fixtures from the programmer">KNOCKOUT</button>
+        <button data-cmd="fxoff" title="Stop programmer effects on the selection">FX OFF</button>
+        <button data-cmd="invert" title="Invert the selection">INVERT</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="pools" class="win">
+    <div class="wh"><span>Pools</span><span class="whinfo">STORE then click a slot to record. Click an empty Effect or Macro slot to create one.</span></div>
+    <div class="wb">
+      <div class="pool" id="pool-groups" style="--pc:var(--blu)"><div class="poh">Groups</div><div class="pg"></div></div>
+      <div class="pool wide" id="pool-colours" style="--pc:var(--mag)"><div class="poh">Colours</div><div class="pg"></div></div>
+      <div class="pool" id="pool-effects" style="--pc:var(--grn)"><div class="poh">Effects</div><div class="pg"></div></div>
+      <div class="pool" id="pool-scenes" style="--pc:var(--cya)"><div class="poh">Scenes</div><div class="pg"></div></div>
+      <div class="pool" id="pool-macros" style="--pc:var(--org)"><div class="poh">Macros</div><div class="pg"></div></div>
+    </div>
+  </section>
+
+  <section id="cues" class="win">
+    <div class="wh"><span id="cueTitle">Exec 1</span><span class="whinfo" id="cueMode" style="margin-left:0"></span>
+      <span style="margin-left:auto;display:flex;gap:3px">
+        <button class="hb" data-cue="goto" title="Go to the selected cue">GOTO</button>
+        <button class="hb" data-cue="load" title="Load the selected cue into the programmer for editing">LOAD</button>
+        <button class="hb" data-cue="update" title="Merge programmer into the selected (or current) cue">UPDATE</button>
+        <button class="hb" data-cue="cfg" title="Executor settings">EXEC</button>
+      </span>
+    </div>
+    <div class="wb"><table class="cuetbl"><thead><tr><th></th><th>Cue</th><th>Name</th><th>Fade</th><th>Dly</th><th>Fix</th></tr></thead><tbody id="cueBody"></tbody></table></div>
+  </section>
+
+  <section id="execs" class="win">
+    <div class="wh"><span>Executors</span><span class="whinfo">Click a header to select and view its cues. Space = GO on the selected executor.</span></div>
+    <div id="execRow"></div>
+  </section>
+
+  <section id="masters" class="win">
+    <div class="wh"><span>Masters</span></div>
+    <div class="mst">
+      <div class="mcol"><div class="fader" id="gmFader" style="--fc2:var(--sel)"></div><div class="mlab">GRAND</div></div>
+      <div class="sms">
+        <div class="sm" data-sm="0"><div class="smh">SPEED 1</div><div class="smv"><span>30</span><small>BPM</small></div><div class="smb"><button data-smact="tap">TAP</button><button data-smact="half">&divide;2</button><button data-smact="dbl">&times;2</button></div><i class="smled"></i></div>
+        <div class="sm" data-sm="1"><div class="smh">SPEED 2</div><div class="smv"><span>120</span><small>BPM</small></div><div class="smb"><button data-smact="tap">TAP</button><button data-smact="half">&divide;2</button><button data-smact="dbl">&times;2</button></div><i class="smled"></i></div>
+      </div>
+      <div class="bo"><button id="boBtn" title="Kill all output (B)">BLACK<br>OUT</button><button class="mini" id="releaseBtn" title="Turn off all executors and clear the programmer. Lights stay as they are.">RELEASE ALL</button></div>
+    </div>
+  </section>
+
+  <footer id="cmd" class="win">
+    <div class="cl"><span class="prompt" id="prompt">[Fixture]&gt;</span><input id="cmdIn" autocomplete="off" spellcheck="false" placeholder="e.g.  1 thru 8 at 50   |   group 2 preset 4.3   |   go exec 1"><div id="fb" class="fb"></div></div>
+    <div class="keys">
+      <button class="k red" data-arm="store" title="Arm Store, then click an executor, cue or pool slot">STORE</button>
+      <button class="k org" data-arm="update" title="Arm Update, then click a cue. Press twice to update the current cue.">UPDATE</button>
+      <button class="k" data-arm="delete">DELETE</button>
+      <button class="k" data-arm="label">LABEL</button>
+      <button class="k" data-arm="edit">EDIT</button>
+      <span class="ksep"></span>
+      <button class="k" data-cmd="oops" title="Undo the last programmer change (Ctrl+Z)">OOPS</button>
+      <button class="k amb" data-cmd="clear" title="Clear selection, then programmer (Esc). Double-click to clear all.">CLEAR</button>
+      <span class="ksep"></span>
+      <button class="k" data-cmd="highlight" id="kHl" title="Selected fixtures to full white">HIGHLT</button>
+      <button class="k blu" data-cmd="blind" id="kBlind" title="Programmer changes do not output">BLIND</button>
+      <span class="ksep"></span>
+      <button class="k" data-cmd="all">ALL</button>
+      <button class="k" data-cmd="odd">ODD</button>
+      <button class="k" data-cmd="even">EVEN</button>
+      <button class="k" data-cmd="prev">PREV</button>
+      <button class="k" data-cmd="next">NEXT</button>
+    </div>
+  </footer>
+</div>
+
+<div class="modal" id="modal" hidden><div class="mbox"><div class="mh"><span class="mt"></span><button class="mx" title="Close">&times;</button></div><div class="mb"></div></div></div>
+<div id="tour" hidden><div class="tspot"></div><div class="tcard" role="dialog" aria-live="polite">
+  <div class="tstep"></div><div class="tdots"></div><h3></h3><div class="tbody"></div>
+  <div class="tfoot"><label class="tno"><input type="checkbox" id="tourNo"> Don't show this again</label><span class="sp"></span>
+  <button class="btn" id="tourSkip">Skip tour</button><button class="btn" id="tourBack">Back</button><button class="btn pri" id="tourNext">Next</button></div></div></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* =========================================================================
+   HueDesk : a theatre-style lighting console for Philips Hue (bridge REST API v1)
+   ========================================================================= */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, now=()=>performance.now();
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const fmtNum=n=>Number.isInteger(+n)?String(+n):String(+(+n).toFixed(2));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const NEX=10, DIMMERS=[0,10,25,50,75,100];
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* ---------------- colour maths ---------------- */
+function hsC(h,s){return {cm:'hs',h,s}}
+function ctC(m){return {cm:'ct',ct:m}}
+function hsv2rgb(h,s,v){h=((h%360)+360)%360;const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let r,g,b;
+  if(h<60)[r,g,b]=[c,x,0];else if(h<120)[r,g,b]=[x,c,0];else if(h<180)[r,g,b]=[0,c,x];else if(h<240)[r,g,b]=[0,x,c];else if(h<300)[r,g,b]=[x,0,c];else[r,g,b]=[c,0,x];
+  return [(r+m)*255,(g+m)*255,(b+m)*255];}
+function k2rgb(k){const t=k/100;let r,g,b;
+  if(t<=66){r=255;g=99.4708025861*Math.log(t)-161.1195681661;b=t<=19?0:138.5177312231*Math.log(t-10)-305.0447927307;}
+  else{r=329.698727446*Math.pow(t-60,-0.1332047592);g=288.1221695283*Math.pow(t-60,-0.0755148492);b=255;}
+  return [clamp(r,0,255),clamp(g,0,255),clamp(b,0,255)];}
+function rgb2hs(r,g,b){const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;
+  if(d){if(mx===r)h=((g-b)/d)%6;else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360;}
+  return {h,s:mx?d/mx*100:0};}
+function xy2rgb(x,y){const z=1-x-y,Y=1,X=Y/y*x,Z=Y/y*z;
+  let r=X*1.656492-Y*0.354851-Z*0.255038,g=-X*0.707196+Y*1.655397+Z*0.036152,b=X*0.051713-Y*0.121364+Z*1.011530;
+  const gm=v=>v<=0.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-0.055;r=gm(Math.max(0,r));g=gm(Math.max(0,g));b=gm(Math.max(0,b));
+  const mx=Math.max(r,g,b,1e-6);return [r/mx*255,g/mx*255,b/mx*255];}
+function hex2c(hex){const n=parseInt(hex.slice(1),16);const o=rgb2hs(n>>16&255,n>>8&255,n&255);return hsC(Math.round(o.h),Math.round(o.s));}
+function c2hex(c){return '#'+cRgb(c).map(v=>pad(Math.round(v).toString(16))).join('');}
+function cRgb(c){if(!c)return [255,205,150];return c.cm==='ct'?k2rgb(1e6/c.ct):hsv2rgb(c.h,c.s/100,1);}
+function toHs(c){if(!c)return hsC(30,40);if(c.cm==='hs')return c;const [r,g,b]=k2rgb(1e6/c.ct);const o=rgb2hs(r,g,b);return hsC(o.h,o.s);}
+function lerpHue(a,b,t){const d=((b-a+540)%360)-180;return (a+d*t+360)%360;}
+function lerpC(a,b,t){if(!a)return b;if(!b)return a;if(t<=0)return a;if(t>=1)return b;
+  if(a.cm==='ct'&&b.cm==='ct')return ctC(lerp(a.ct,b.ct,t));
+  const A=toHs(a),B=toHs(b);let ha=A.h,hb=B.h;if(A.s<3)ha=hb;if(B.s<3)hb=ha;
+  return hsC(lerpHue(ha,hb,t),lerp(A.s,B.s,t));}
+function cCss(c,dim=100){const [r,g,b]=cRgb(c);const v=dim<=0?0:.3+.7*dim/100;return `rgb(${r*v|0},${g*v|0},${b*v|0})`;}
+function cName(c){if(!c)return '-';return c.cm==='ct'?`${Math.round(1e6/c.ct/50)*50}K`:`${Math.round(c.h)}° ${Math.round(c.s)}%`;}
+function hsToCt(c){const h=toHs(c);const warm=(h.h<70||h.h>330)?h.s/100:0;return 250+warm*230;}
+
+/* ---------------- show defaults ---------------- */
+function newExec(){return {label:'',mode:'seq',bpm:60,sm:0,xfade:50,offFade:1.5,defFade:2,cues:[]};}
+function defaultColours(){const L=[['Candle',ctC(500)],['Warm',ctC(400)],['Soft',ctC(333)],['Neutral',ctC(250)],['Daylight',ctC(182)],['Cool',ctC(153)],
+  ['Red',hsC(0,100)],['Orange',hsC(22,100)],['Amber',hsC(36,100)],['Yellow',hsC(52,100)],['Lime',hsC(85,100)],['Green',hsC(120,100)],['Teal',hsC(165,100)],['Cyan',hsC(186,100)],
+  ['Sky',hsC(205,80)],['Blue',hsC(232,100)],['Indigo',hsC(255,100)],['Purple',hsC(275,100)],['Magenta',hsC(300,100)],['Pink',hsC(330,70)],['Lavender',hsC(270,40)],['Peach',hsC(20,50)]];
+  return L.map(([n,c],i)=>({slot:i+1,name:n,c}));}
+function fxDefaults(){return {sm:0,bpm:30,low:0,high:100,width:50,spread:0,blocks:1,wings:1,sat:100,c1:hsC(0,100),c2:hsC(240,100),smooth:true};}
+function defaultEffects(){const E=[
+  {name:'Breathe',type:'sine',bpm:8,low:15,high:100},
+  {name:'Wave',type:'sine',bpm:10,low:5,high:100,spread:360},
+  {name:'Slow Rainbow',type:'rainbow',bpm:2,spread:360},
+  {name:'Fast Rainbow',type:'rainbow',bpm:15,spread:180},
+  {name:'Fire',type:'flicker',bpm:60,low:35,high:100},
+  {name:'Chase',type:'pulse',bpm:30,width:30,spread:360},
+  {name:'Sparkle',type:'random',bpm:40,width:35,low:5,high:100},
+  {name:'Red/Blue',type:'colour2',bpm:40,c1:hsC(0,100),c2:hsC(235,100),smooth:false,spread:180},
+  {name:'Ocean',type:'colour2',bpm:4,c1:hsC(170,100),c2:hsC(232,100),smooth:true,spread:360},
+  {name:'Sunset',type:'colour2',bpm:3,c1:hsC(18,100),c2:hsC(320,80),smooth:true,spread:270},
+  {name:'Ramp',type:'ramp',bpm:20,spread:360}];
+  return E.map((e,i)=>Object.assign({slot:i+1},fxDefaults(),e));}
+function defaultMacros(){return [
+  {slot:1,name:'All Off',lines:'Off Executor 1 Thru 10\nAll At 0'},
+  {slot:2,name:'Release',lines:'Off Executor 1 Thru 10\nClearAll'},
+  {slot:3,name:'Morning',lines:'Goto Cue 1 Executor 1'},
+  {slot:4,name:'Evening',lines:'Goto Cue 3 Executor 1'},
+  {slot:5,name:'Night',lines:'Goto Cue 5 Executor 1'},
+  {slot:6,name:'Party',lines:'Go Executor 2'}];}
+function defaultShow(){return {version:1,name:'My House',settings:{ip:'',user:'',scheme:'https',rate:10,groupOpt:true},
+  fixtures:[],hueGroups:[],groups:[],colours:defaultColours(),scenes:[],effects:defaultEffects(),macros:defaultMacros(),
+  executors:Array.from({length:NEX},()=>newExec()),agenda:[],sm:[{bpm:30},{bpm:120}]};}
+function migrate(j){const d=defaultShow();for(const k in d)if(j[k]===undefined)j[k]=d[k];j.settings=Object.assign(d.settings,j.settings);
+  while(j.executors.length<NEX)j.executors.push(newExec());j.executors.forEach(e=>{for(const k in newExec())if(e[k]===undefined)e[k]=newExec()[k];});return j;}
+function autoGroups(s){s.groups=[{slot:1,name:'All',fixtures:s.fixtures.map(f=>f.id)}];
+  s.hueGroups.filter(g=>g.id!=='0').forEach((g,i)=>s.groups.push({slot:i+2,name:g.name,fixtures:[...g.lights]}));}
+
+function makeDemoShow(){
+  const s=defaultShow();s.name='Demo House';
+  const R=[['Living Room',[['Ceiling 1','c'],['Ceiling 2','c'],['Ceiling 3','c'],['Ceiling 4','c'],['Floor Lamp','c'],['TV Gradient','c'],['Shelf Strip','c'],['Table Lamp','c']]],
+    ['Kitchen',[['Pendant 1','c'],['Pendant 2','c'],['Pendant 3','c'],['Under Cabinet','c'],['Spot 1','t'],['Spot 2','t']]],
+    ['Bedroom',[['Ceiling','t'],['Bedside L','c'],['Bedside R','c'],['Wardrobe','d']]],
+    ['Hallway',[['Landing','t'],['Hall 1','d'],['Hall 2','d'],['Porch','c']]],
+    ['Office',[['Desk Lamp','t'],['Play Bar L','c'],['Play Bar R','c'],['Ceiling','t']]],
+    ['Garden',[['Path 1','c'],['Path 2','c'],['Path 3','c'],['Tree Spot','c'],['Patio Strip','c'],['Shed','c'],['Fountain','p']]]];
+  let id=1;const hg=[];
+  for(const [room,list] of R){const ids=[];for(const [name,k] of list){
+    s.fixtures.push({id,hueId:String(id),uid:'demo-'+id,name,room,type:k==='p'?'On/Off plug-in unit':k==='c'?'Extended color light':k==='t'?'Color temperature light':'Dimmable light',caps:{color:k==='c',ct:k!=='d'&&k!=='p',dim:k!=='p'},ctMin:153,ctMax:500,reachable:true});
+    ids.push(id);id++;}hg.push({id:String(hg.length+1),name:room,type:'Room',lights:ids});}
+  s.hueGroups=[{id:'0',name:'All lights',type:'All',lights:s.fixtures.map(f=>f.id)},...hg];
+  autoGroups(s);buildStarter(s);return s;}
+
+function buildStarter(s){
+  const F=s.fixtures.filter(f=>!isSwitch(f)),colour=F.filter(f=>f.caps.color);if(!F.length)return;
+  const val=(f,dim,c)=>{const v={dim};if(c&&(f.caps.color||(f.caps.ct&&c.cm==='ct')))v.c=c;return v;};
+  const all=(dim,c)=>{const o={};F.forEach(f=>o[f.id]=val(f,dim,c));return o;};
+  const roomOf=re=>F.filter(f=>re.test(f.room||''));
+  const ex=(i,o)=>{s.executors[i]=Object.assign(newExec(),o);};
+  const living=roomOf(/living|lounge|sitting|family|tv/i),lv=living.length?living:F.slice(0,Math.ceil(F.length/4));
+  const hall=roomOf(/hall|landing|stair|porch|entr/i),keep=hall.length?hall:F.slice(0,1);
+  const relax=all(35,ctC(454));colour.filter(f=>lv.includes(f)).forEach(f=>relax[f.id]={dim:30,c:hsC(32,85)});
+  const night=all(0);keep.forEach(f=>night[f.id]=val(f,8,ctC(500)));
+  ex(0,{label:'House',defFade:3,cues:[
+    {num:1,name:'Morning',fade:5,delay:0,values:all(80,ctC(200)),effects:[]},
+    {num:2,name:'Daytime',fade:4,delay:0,values:all(100,ctC(250)),effects:[]},
+    {num:3,name:'Evening',fade:8,delay:0,values:all(60,ctC(400)),effects:[]},
+    {num:4,name:'Relax',fade:6,delay:0,values:relax,effects:[]},
+    {num:5,name:'Night',fade:10,delay:0,values:night,effects:[]}]});
+  const hues=[[0,'Red'],[300,'Magenta'],[232,'Blue'],[186,'Cyan'],[120,'Green'],[36,'Amber']];
+  ex(1,{label:'Party',mode:'chase',bpm:20,xfade:60,cues:hues.map(([h,n],i)=>{const v={};colour.forEach(f=>v[f.id]={dim:100,c:hsC(h,100)});return {num:i+1,name:n,fade:0,delay:0,values:v,effects:[]};})});
+  const fxBy=n=>JSON.parse(JSON.stringify(s.effects.find(e=>e.name===n)||defaultEffects()[2]));
+  const cv={};colour.forEach(f=>cv[f.id]={dim:80});
+  ex(2,{label:'Rainbow',cues:[{num:1,name:'Slow rainbow',fade:3,delay:0,values:cv,effects:[{def:fxBy('Slow Rainbow'),fixtures:colour.map(f=>f.id)}]}]});
+  const mv=all(0);colour.filter(f=>lv.includes(f)).forEach(f=>mv[f.id]={dim:12,c:hsC(232,90)});
+  ex(3,{label:'Movie',defFade:4,cues:[{num:1,name:'Movie',fade:4,delay:0,values:mv,effects:[]}]});
+  const fire=colour.filter(f=>lv.includes(f)),fv={};fire.forEach(f=>fv[f.id]={dim:70,c:hsC(25,95)});
+  ex(4,{label:'Fireside',cues:[{num:1,name:'Fire',fade:3,delay:0,values:fv,effects:[{def:fxBy('Fire'),fixtures:fire.map(f=>f.id)}]}]});
+  for(let i=5;i<NEX;i++)s.executors[i]=newExec();
+}
+
+/* ---------------- state ---------------- */
+let MODE='real', S=null, showVer=0, saveTimer=0;
+const RT={sel:[],selAll:null,selPos:0,lastClick:null,prog:{},pfx:[],live:{},base:{},lamp:{},wasCtl:{},
+  ex:[],stamp:0,gm:1,blackout:false,highlight:false,blind:false,selExec:0,armed:null,align:0,progFade:0,
+  connected:false,oops:[],oopsT:0,hist:[],histI:-1,trackCache:new Map(),smPh:[0,0],smT:0,taps:[[],[]],modal:false,view:'grid',macroDepth:0,lastFrame:0};
+function newXr(){return {level:1,cueIdx:-1,active:false,fade:null,off:null,stamp:0,flash:false,paused:false,pos:0,posT:0,startSnap:null,cueSel:-1};}
+RT.ex=Array.from({length:NEX},newXr);
+const OUT={tokens:0,lastT:0,inflight:0,log:[],dirty:0,groupNext:0,force:new Set(),last:{},lastT_:{},errs:0};
+
+function loadShow(){const raw=store.get(MODE==='demo'?'huedesk.demo':'huedesk.show');
+  if(raw){try{return migrate(JSON.parse(raw));}catch(e){}}return MODE==='demo'?makeDemoShow():defaultShow();}
+function saveShow(){store.set(MODE==='demo'?'huedesk.demo':'huedesk.show',JSON.stringify(S));}
+function touch(render=true){showVer++;RT.trackCache.clear();clearTimeout(saveTimer);saveTimer=setTimeout(saveShow,500);if(render)renderAll();}
+const fixById=id=>S.fixtures.find(f=>f.id===+id);
+const slotOf=(arr,s)=>arr.find(x=>x.slot===+s);
+const effBySlot=s=>slotOf(S.effects,s);
+
+/* ---------------- effects ---------------- */
+function hash(a,b){let h=(Math.imul(a|0,374761393)+Math.imul(b|0,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;}
+function noise(x,seed){const i=Math.floor(x),f=x-i,u=f*f*(3-2*f);return lerp(hash(i,seed),hash(i+1,seed),u);}
+function smPhase(i,t){return RT.smPh[i]+(t-RT.smT)/60000*S.sm[i].bpm;}
+function fxCycles(d,t){return d.sm?smPhase(d.sm-1,t):t/60000*Math.max(.1,+d.bpm||1);}
+const FX_ATTR={sine:'d',ramp:'d',pulse:'d',random:'d',flicker:'dc',rainbow:'c',colour2:'c'};
+const FX_ICON={sine:'~',ramp:'/',pulse:'▐',random:'*',flicker:'^',rainbow:'◐',colour2:'⇄'};
+function fxValue(d,i,n,t,fid){
+  let idx=i,cnt=n;const W=Math.max(1,d.wings|0);
+  if(W>1){const ws=Math.ceil(n/W),w=Math.floor(i/ws);idx=i%ws;if(w%2)idx=ws-1-idx;cnt=ws;}
+  const B=Math.max(1,d.blocks|0);if(B>1){idx=Math.floor(idx/B);cnt=Math.ceil(cnt/B);}
+  const ph=cnt>1?((+d.spread||0)/360)*(idx/cnt):0,cyc=fxCycles(d,t),x=((cyc-ph)%1+1)%1;
+  const lo=+d.low||0,hi=d.high==null?100:+d.high;
+  switch(d.type){
+    case 'sine':return {dim:lo+(hi-lo)*(.5-.5*Math.cos(2*Math.PI*x))};
+    case 'ramp':return {dim:lo+(hi-lo)*x};
+    case 'pulse':return {dim:x<(+d.width||50)/100?hi:lo};
+    case 'random':return {dim:hash(fid*7919,Math.floor(cyc*2))<(+d.width||50)/100?hi:lo};
+    case 'flicker':{const k=cyc*2;const v=noise(k*2.3,fid)*.65+noise(k*6.1,fid+99)*.35;return {dim:lo+(hi-lo)*v,c:hsC(16+noise(k*1.7,fid+7)*18,86+noise(k,fid+3)*14)};}
+    case 'rainbow':return {c:hsC((x*360)%360,d.sat==null?100:+d.sat)};
+    case 'colour2':{const p=d.smooth?.5-.5*Math.cos(2*Math.PI*x):(x<.5?0:1);return {c:lerpC(d.c1,d.c2,p)};}
+  }return {};}
+
+/* ---------------- playback engine ---------------- */
+function tracked(e,idx){const key=e+':'+idx;let v=RT.trackCache.get(key);if(v)return v;v={};
+  const cues=S.executors[e].cues;
+  for(let k=0;k<=idx&&k<cues.length;k++){const cv=cues[k].values;for(const f in cv){const o=v[f]?{...v[f]}:{};if(cv[f].dim!=null)o.dim=cv[f].dim;if(cv[f].c)o.c=cv[f].c;v[f]=o;}}
+  RT.trackCache.set(key,v);return v;}
+function chaseVals(e,idx){const key='c'+e+':'+idx;let v=RT.trackCache.get(key);if(v)return v;
+  const ex=S.executors[e],all=new Set();ex.cues.forEach(c=>Object.keys(c.values).forEach(f=>all.add(f)));v={};
+  const cv=ex.cues[idx].values;for(const f of all)v[f]=cv[f]?{...cv[f]}:{dim:0};RT.trackCache.set(key,v);return v;}
+function blendVals(from,to,p){const out={};
+  for(const f in to){const a=from[f],b=to[f],o={};
+    if(b.dim!=null)o.dim=a&&a.dim!=null?lerp(a.dim,b.dim,p):b.dim*p;
+    if(b.c)o.c=a&&a.c?lerpC(a.c,b.c,p):b.c;out[f]=o;}
+  for(const f in from){if(f in to)continue;const a=from[f],o={c:a.c};if(a.dim!=null)o.dim=a.dim*(1-p);out[f]=o;}
+  return out;}
+function stepMs(e){const ex=S.executors[e];const bpm=ex.sm?S.sm[ex.sm-1].bpm:ex.bpm;return 60000/Math.max(.5,+bpm||60);}
+function chasePos(e,t){const xr=RT.ex[e];return xr.paused?xr.pos:xr.pos+(t-xr.posT)/stepMs(e);}
+function pushFx(arr,cue,w){if(cue&&cue.effects)for(const inst of cue.effects)arr.push({inst,w});}
+function execContrib(e,t){
+  const ex=S.executors[e],xr=RT.ex[e];if(!ex.cues.length)return null;if(!xr.active&&!xr.flash)return null;
+  let level=xr.flash?1:xr.level,vals,fx=[];
+  if(!xr.active){vals=ex.mode==='chase'?chaseVals(e,0):tracked(e,0);pushFx(fx,ex.cues[0],1);}
+  else if(ex.mode==='chase'){
+    const n=ex.cues.length,pos=chasePos(e,t),k=Math.floor(pos),u=pos-k,idx=((k%n)+n)%n,pidx=(idx-1+n)%n;
+    const xf=(+ex.xfade||0)/100,p=xf<=0?1:clamp(u/xf,0,1),to=chaseVals(e,idx);
+    const from=k<=0?(xr.startSnap||{}):chaseVals(e,pidx);
+    vals=p>=1?to:blendVals(from,to,p);pushFx(fx,ex.cues[idx],p);if(k>0&&p<1)pushFx(fx,ex.cues[pidx],1-p);
+  }else{
+    const idx=clamp(xr.cueIdx,0,ex.cues.length-1),tgt=tracked(e,idx),F=xr.fade;
+    if(F){const st=F.t0+F.delay,p=t<st?0:F.dur<=0?1:clamp((t-st)/F.dur,0,1);
+      if(p<1){vals=blendVals(F.from,tgt,p);pushFx(fx,ex.cues[idx],p);for(const i of F.fromFx)fx.push({inst:i,w:1-p});}
+      else{vals=tgt;pushFx(fx,ex.cues[idx],1);}}
+    else{vals=tgt;pushFx(fx,ex.cues[idx],1);}
+  }
+  if(xr.off&&!xr.flash){const p=xr.off.dur<=0?1:clamp((t-xr.off.t0)/xr.off.dur,0,1);level*=1-p;}
+  return {vals,fx,level,stamp:xr.flash?1e9:xr.stamp,e};
+}
+function pval(pv,t){if(!pv)return null;if(pv.dur>0&&t<pv.t0+pv.dur){const p=clamp((t-pv.t0)/pv.dur,0,1);return pv.isC?lerpC(pv.from,pv.v,p):lerp(pv.from??pv.v,pv.v,p);}return pv.v;}
+function evaluate(t,withSrc){
+  const C=[];for(let e=0;e<NEX;e++){const c=execContrib(e,t);if(c)C.push(c);}
+  const fxMap=new Map(),pfxMap=new Map();
+  const add=(map,inst,w,level,e)=>{const def=inst.def||effBySlot(inst.slot);if(!def||w<=0)return;const n=inst.fixtures.length;
+    inst.fixtures.forEach((f,i)=>{let a=map.get(+f);if(!a)map.set(+f,a=[]);a.push({def,i,n,w,level,e});});};
+  for(const c of C)for(const x of c.fx)add(fxMap,x.inst,x.w,c.level,c.e);
+  if(!RT.blind)for(const inst of RT.pfx)add(pfxMap,inst,1,1,-1);
+  const hl=RT.highlight?new Set(RT.sel):null,out={};
+  for(const fx of S.fixtures){const f=fx.id;let dim=null,c=null,cs=-1,ctl=false,src='';
+    for(const k of C){const v=k.vals[f];if(!v)continue;ctl=true;
+      if(v.dim!=null){const d=v.dim*k.level;if(dim==null||d>=dim){dim=d;if(withSrc)src='EX'+(k.e+1);}}
+      if(v.c&&k.level>.001&&k.stamp>cs){c=v.c;cs=k.stamp;}}
+    const fl=fxMap.get(f);if(fl)for(const a of fl){const r=fxValue(a.def,a.i,a.n,t,f);ctl=true;
+      if(r.dim!=null)dim=lerp(dim??0,r.dim*a.level,a.w);if(r.c&&a.level>.001)c=c?lerpC(c,r.c,a.w):r.c;if(withSrc)src=src?src+'+FX':'EX'+(a.e+1)+' FX';}
+    if(!RT.blind){const pv=RT.prog[f];if(pv){ctl=true;const d=pval(pv.dim,t);if(d!=null){dim=d;if(withSrc)src='PROG';}const cc=pval(pv.c,t);if(cc){c=cc;if(withSrc&&d==null)src=(src?src+' ':'')+'PROG';}}
+      const pl=pfxMap.get(f);if(pl)for(const a of pl){const r=fxValue(a.def,a.i,a.n,t,f);ctl=true;if(r.dim!=null)dim=r.dim;if(r.c)c=r.c;if(withSrc)src='PROG FX';}}
+    const isHl=hl&&hl.has(f);if(isHl){ctl=true;dim=100;c=ctC(220);if(withSrc)src='HIGHLIGHT';}
+    if(!ctl){out[f]=null;continue;}
+    const b=RT.base[f]||{dim:0,c:ctC(366)};if(dim==null)dim=b.dim;if(!c)c=b.c;
+    if(!isHl)dim*=RT.gm;if(RT.blackout)dim=0;
+    out[f]=withSrc?{dim,c,src}:{dim,c};}
+  return out;}
+
+/* ---------------- executor actions ---------------- */
+function liveSnap(f){const L=RT.live[f];return L?{dim:L.dim,c:L.c}:{dim:0};}
+function execGo(e,toIdx){
+  const ex=S.executors[e],xr=RT.ex[e],t=now();
+  if(!ex.cues.length){msg(`Executor ${e+1} is empty. Set values, press STORE, then click it.`,'warn');return;}
+  if(ex.mode==='chase'){
+    if(!xr.active||xr.off){const snap={},all=chaseVals(e,0);for(const f in all)snap[f]=liveSnap(f);
+      Object.assign(xr,{active:true,off:null,paused:false,pos:toIdx??0,posT:t,startSnap:snap,stamp:++RT.stamp});}
+    else if(xr.paused){xr.pos=Math.floor(xr.pos)+1;}
+    else if(toIdx!=null){xr.pos=toIdx;xr.posT=t;}
+    else{xr.pos=Math.floor(chasePos(e,t))+1;xr.posT=t;}
+    return;}
+  let idx=toIdx??(xr.active&&!xr.off?xr.cueIdx+1:0);if(idx>=ex.cues.length)idx=0;if(idx<0)idx=0;
+  const cur=xr.active&&!xr.off?execContrib(e,t):null,from=cur?{...cur.vals}:{};
+  const tgt=tracked(e,idx);for(const f in tgt)if(!(f in from))from[f]=liveSnap(f);
+  const cue=ex.cues[idx];
+  xr.fade={from,t0:t,dur:(+cue.fade||0)*1000,delay:(+cue.delay||0)*1000,fromFx:cur?cur.fx.filter(x=>x.w>0).map(x=>x.inst):[]};
+  Object.assign(xr,{cueIdx:idx,active:true,off:null,stamp:++RT.stamp,cueSel:idx});
+}
+function execBack(e){const ex=S.executors[e],xr=RT.ex[e];if(ex.mode==='chase')return execPause(e);
+  if(!xr.active){msg(`Executor ${e+1} is off`,'warn');return;}execGo(e,Math.max(0,xr.cueIdx-1));}
+function execPause(e){const xr=RT.ex[e];if(!xr.active)return;const t=now();
+  if(xr.paused){xr.paused=false;xr.posT=t;}else{xr.pos=chasePos(e,t);xr.paused=true;}}
+function execOff(e){const xr=RT.ex[e];if(!xr.active||xr.off)return;xr.off={t0:now(),dur:(+S.executors[e].offFade||0)*1000};}
+function execGoto(e,num){const ex=S.executors[e];const i=ex.cues.findIndex(c=>Math.abs(c.num-num)<1e-6);
+  if(i<0){msg(`Cue ${num} not found on executor ${e+1}`,'err');return;}execGo(e,i);}
+function housekeep(t){
+  const p0=smPhase(0,t),p1=smPhase(1,t);RT.smPh=[p0,p1];RT.smT=t;
+  for(let e=0;e<NEX;e++){const xr=RT.ex[e];
+    if(xr.active&&S.executors[e].mode==='chase'&&!xr.paused){xr.pos=chasePos(e,t);xr.posT=t;}
+    if(xr.off&&t>xr.off.t0+xr.off.dur+3500){Object.assign(xr,{active:false,off:null,cueIdx:-1,fade:null,paused:false});}
+    if(xr.active&&!S.executors[e].cues.length)Object.assign(xr,{active:false,off:null,cueIdx:-1,fade:null});}}
+
+/* ---------------- programmer ---------------- */
+function progDimV(f){const pv=RT.prog[f];return pv&&pv.dim?pv.dim.v:(RT.live[f]?.dim??0);}
+function progCV(f){const pv=RT.prog[f];return pv&&pv.c?pv.c.v:(RT.live[f]?.c??ctC(366));}
+function setPDim(f,v){const t=now(),o=RT.prog[f]||(RT.prog[f]={});o.dim={v:clamp(v,0,100),from:RT.live[f]?.dim??0,t0:t,dur:RT.progFade*1000};}
+function setPC(f,c){const t=now(),o=RT.prog[f]||(RT.prog[f]={});o.c={v:c,from:RT.live[f]?.c||c,t0:t,dur:RT.progFade*1000,isC:true};}
+function snapProg(){const p={};for(const f in RT.prog){const o=RT.prog[f],s={};if(o.dim)s.dim=o.dim.v;if(o.c)s.c=o.c.v;p[f]=s;}
+  return {p,pfx:RT.pfx.map(x=>({...x,fixtures:[...x.fixtures]})),sel:[...RT.sel]};}
+function pushOops(coalesce){const t=now();if(coalesce&&t-RT.oopsT<900){RT.oopsT=t;return;}RT.oopsT=t;RT.oops.push(snapProg());if(RT.oops.length>60)RT.oops.shift();}
+function oops(){const s=RT.oops.pop();if(!s){msg('Nothing to undo','warn');return;}RT.prog={};
+  for(const f in s.p){const o={};if(s.p[f].dim!=null)o.dim={v:s.p[f].dim,dur:0};if(s.p[f].c)o.c={v:s.p[f].c,dur:0,isC:true};if(o.dim||o.c)RT.prog[f]=o;}
+  RT.pfx=s.pfx;RT.sel=s.sel;RT.selAll=null;selChanged();msg('Oops: programmer restored','ok');}
+function needSel(){if(!RT.sel.length){msg('Select fixtures first (click tiles or a group)','warn');return false;}return true;}
+function alignF(i,n){if(n<2||!RT.align)return 1;const x=i/(n-1);return RT.align===1?x:RT.align===2?1-x:1-Math.abs(2*x-1);}
+function setDimSel(v,rel){if(!needSel())return;pushOops();const n=RT.sel.length;
+  RT.sel.forEach((f,i)=>setPDim(f,rel?progDimV(f)+v*alignF(i,n):v));progTouched();}
+function applyColour(c,coalesce){if(!needSel())return;pushOops(coalesce);RT.sel.forEach(f=>setPC(f,{...c}));progTouched();}
+function encChange(attr,delta){
+  if(attr==='fade'){RT.progFade=clamp(Math.round((RT.progFade+delta)*10)/10,0,60);return;}
+  if(!needSel())return;pushOops(true);const n=RT.sel.length;
+  RT.sel.forEach((f,i)=>{const d=delta*alignF(i,n);
+    if(attr==='dim')setPDim(f,progDimV(f)+d);
+    else if(attr==='hue'||attr==='sat'){const c={...toHs(progCV(f))};if(attr==='hue')c.h=((c.h+d)%360+360)%360;else c.s=clamp(c.s+d,0,100);setPC(f,hsC(c.h,c.s));}
+    else if(attr==='ct'){const c=progCV(f);const m=clamp((c.cm==='ct'?c.ct:hsToCt(c))-d,153,500);setPC(f,ctC(m));}});
+  progTouched();}
+function encSet(attr,v){
+  if(attr==='fade'){RT.progFade=clamp(v,0,60);return;}if(!needSel())return;pushOops();
+  RT.sel.forEach(f=>{if(attr==='dim')setPDim(f,v);
+    else if(attr==='hue'){const c=toHs(progCV(f));setPC(f,hsC(((v%360)+360)%360,c.s<5?100:c.s));}
+    else if(attr==='sat'){const c=toHs(progCV(f));setPC(f,hsC(c.h,clamp(v,0,100)));}
+    else if(attr==='ct'){setPC(f,ctC(clamp(v>1000?1e6/v:v,153,500)));}});progTouched();}
+function knockout(){if(!needSel())return;pushOops();RT.sel.forEach(f=>delete RT.prog[f]);removeProgFx(RT.sel);progTouched();msg('Knocked out selection','ok');}
+function removeProgFx(fids){const s=new Set(fids.map(Number));RT.pfx.forEach(x=>x.fixtures=x.fixtures.filter(f=>!s.has(+f)));RT.pfx=RT.pfx.filter(x=>x.fixtures.length);}
+function toggleEffect(slot){if(!needSel())return;const d=effBySlot(slot);if(!d)return;pushOops();
+  const same=RT.pfx.find(x=>x.slot===slot&&x.fixtures.length===RT.sel.length&&RT.sel.every(f=>x.fixtures.includes(f)));
+  if(same){RT.pfx=RT.pfx.filter(x=>x!==same);msg(`Effect ${d.name} off`,'ok');}
+  else{const attr=FX_ATTR[d.type]||'d',s=new Set(RT.sel);
+    RT.pfx.forEach(x=>{const xd=effBySlot(x.slot);const xa=xd?FX_ATTR[xd.type]:'';if([...attr].some(a=>xa.includes(a)))x.fixtures=x.fixtures.filter(f=>!s.has(f));});
+    RT.pfx=RT.pfx.filter(x=>x.fixtures.length);RT.pfx.push({slot,fixtures:[...RT.sel]});
+    if(attr.includes('d'))RT.sel.forEach(f=>{if(!RT.prog[f]||!RT.prog[f].dim){}});
+    msg(`Effect ${d.name} on ${RT.sel.length} fixtures`,'ok');}
+  progTouched();}
+function applyScene(sc){const fs=Object.keys(sc.values).map(Number).filter(f=>fixById(f));if(!fs.length){msg('Scene is empty','warn');return;}
+  pushOops();for(const f of fs){const v=sc.values[f];if(v.dim!=null)setPDim(f,v.dim);if(v.c)setPC(f,{...v.c});}
+  RT.sel=fs;RT.selAll=null;selChanged();msg(`Scene ${sc.name} loaded into programmer`,'ok');}
+function progContent(){const values={};for(const f in RT.prog){const o=RT.prog[f],v={};if(o.dim)v.dim=Math.round(o.dim.v*10)/10;if(o.c)v.c={...o.c.v};if(v.dim!=null||v.c)values[f]=v;}
+  const effects=RT.pfx.map(x=>({def:JSON.parse(JSON.stringify(effBySlot(x.slot)||{})),fixtures:[...x.fixtures]})).filter(x=>x.def.type);
+  return {values,effects};}
+function doClear(){if(RT.sel.length){RT.sel=[];RT.selAll=null;selChanged();msg('Selection cleared');}
+  else if(Object.keys(RT.prog).length||RT.pfx.length){pushOops();RT.prog={};RT.pfx=[];progTouched();msg('Programmer cleared (lights hold their state)');}
+  else msg('Nothing to clear');}
+function clearAll(){pushOops();RT.sel=[];RT.selAll=null;RT.prog={};RT.pfx=[];selChanged();msg('Cleared all','ok');}
+function releaseAll(){for(let e=0;e<NEX;e++)execOff(e);clearAll();msg('All executors off, programmer cleared','ok');}
+
+/* ---------------- selection ---------------- */
+function setSel(list){RT.sel=[...new Set(list.map(Number))].filter(f=>fixById(f));RT.selAll=null;selChanged();}
+function toggleSel(f){const i=RT.sel.indexOf(f);if(i>=0)RT.sel.splice(i,1);else RT.sel.push(f);RT.selAll=null;selChanged();}
+function selectAll(){if(RT.selAll){RT.sel=RT.selAll;RT.selAll=null;}else RT.sel=S.fixtures.map(f=>f.id);selChanged();}
+function selOddEven(odd){const src=RT.sel.length?RT.sel:S.fixtures.map(f=>f.id);setSel(src.filter((_,i)=>odd?i%2===0:i%2===1));}
+function selStep(d){if(!RT.selAll){if(!RT.sel.length){msg('Select fixtures first','warn');return;}RT.selAll=[...RT.sel];RT.selPos=d>0?-1:RT.selAll.length;}
+  const n=RT.selAll.length;RT.selPos=((RT.selPos+d)%n+n)%n;RT.sel=[RT.selAll[RT.selPos]];selChanged();}
+function invertSel(){const s=new Set(RT.sel);setSel(S.fixtures.map(f=>f.id).filter(f=>!s.has(f)));}
+function selectGroup(g,add){const fs=g.fixtures.filter(f=>fixById(f));if(add)setSel([...RT.sel,...fs]);else setSel(fs);msg(`Group ${g.name}: ${fs.length} fixtures`);}
+
+/* ---------------- store / update / delete ---------------- */
+function keepPtr(e,fn){const ex=S.executors[e],xr=RT.ex[e];const cur=ex.cues[xr.cueIdx],sel=ex.cues[xr.cueSel];fn();
+  ex.cues.sort((a,b)=>a.num-b.num);xr.cueIdx=cur?ex.cues.indexOf(cur):-1;xr.cueSel=sel?ex.cues.indexOf(sel):-1;
+  if(xr.active&&ex.mode!=='chase'&&xr.cueIdx<0)xr.cueIdx=Math.min(ex.cues.length-1,0);}
+function storeCue(e,num,mode){
+  const ex=S.executors[e],pc=progContent();
+  if(!Object.keys(pc.values).length&&!pc.effects.length){msg('Programmer is empty, nothing to store','warn');return;}
+  if(num==null)num=ex.cues.length?Math.floor(ex.cues[ex.cues.length-1].num)+1:1;
+  const cue=ex.cues.find(c=>Math.abs(c.num-num)<1e-6);
+  if(cue&&!mode){choose(`Cue ${fmtNum(num)} exists on executor ${e+1}`,'Merge adds the programmer to the cue. Overwrite replaces the cue.',[['merge','Merge','pri'],['overwrite','Overwrite','dng']],m=>storeCue(e,num,m));return;}
+  keepPtr(e,()=>{
+    if(cue){if(mode==='overwrite'){cue.values=pc.values;cue.effects=pc.effects;}
+      else{for(const f in pc.values)cue.values[f]=Object.assign(cue.values[f]||{},pc.values[f]);
+        const slots=new Set(pc.effects.map(x=>x.def.slot));cue.effects=(cue.effects||[]).filter(x=>!slots.has(x.def.slot)).concat(pc.effects);}}
+    else ex.cues.push({num:+num,name:'',fade:+ex.defFade||0,delay:0,values:pc.values,effects:pc.effects});});
+  if(!ex.label)ex.label='Exec '+(e+1);
+  RT.selExec=e;touch();msg(`Stored cue ${fmtNum(num)} on executor ${e+1}${cue?' ('+mode+')':''}. Press CLEAR to release the programmer.`,'ok');}
+function updateCue(e,idx){const ex=S.executors[e],xr=RT.ex[e];if(idx==null||idx<0)idx=xr.cueSel>=0?xr.cueSel:xr.cueIdx;
+  if(idx<0||!ex.cues[idx]){msg('No cue to update: select a cue first','warn');return;}
+  const pc=progContent();if(!Object.keys(pc.values).length&&!pc.effects.length){msg('Programmer is empty','warn');return;}
+  storeCue(e,ex.cues[idx].num,'merge');}
+function deleteCue(e,idx){const ex=S.executors[e];const c=ex.cues[idx];if(!c)return;
+  keepPtr(e,()=>ex.cues.splice(idx,1));touch();msg(`Deleted cue ${fmtNum(c.num)} on executor ${e+1}`,'ok');}
+function loadCue(e,idx){const c=S.executors[e].cues[idx];if(!c){msg('Select a cue first','warn');return;}pushOops();
+  for(const f in c.values){const v=c.values[f];if(!fixById(f))continue;if(v.dim!=null)setPDim(+f,v.dim);if(v.c)setPC(+f,{...v.c});}
+  (c.effects||[]).forEach(x=>{const s=x.def.slot;if(effBySlot(s))RT.pfx.push({slot:s,fixtures:[...x.fixtures]});});
+  RT.sel=Object.keys(c.values).map(Number).filter(f=>fixById(f));selChanged();msg(`Cue ${fmtNum(c.num)} loaded into programmer. Edit, then UPDATE.`,'ok');}
+function storeToPool(k,s){const arr=S[k],it=slotOf(arr,s);
+  if(k==='effects')return editEffect(s);if(k==='macros')return editMacro(s);
+  if(k==='groups'){if(!needSel())return;if(it)it.fixtures=[...RT.sel];else arr.push({slot:s,name:'Group '+s,fixtures:[...RT.sel]});}
+  else if(k==='colours'){const c=RT.sel.length?progCV(RT.sel[0]):null;if(!c){msg('Select a fixture with the colour to store','warn');return;}
+    if(it)it.c={...c};else arr.push({slot:s,name:cName(c),c:{...c}});}
+  else if(k==='scenes'){let v=progContent().values;
+    if(!Object.keys(v).length){if(!needSel())return;v={};RT.sel.forEach(f=>{const L=RT.live[f];v[f]={dim:Math.round(L.dim),c:{...L.c}};});}
+    if(it)it.values=v;else arr.push({slot:s,name:'Scene '+s,values:v});}
+  touch();msg(`Stored ${k.slice(0,-1)} ${s}`,'ok');}
+
+/* ---------------- bridge + output scheduler ---------------- */
+/* Bridge transport. Bridges on firmware from mid-2025 (and every Bridge Pro) only accept HTTPS, using a
+   certificate browsers do not trust, so the user must accept it once per browser ("Trust certificate").
+   Older firmware still answers on plain HTTP, so we try HTTPS first and fall back to HTTP. */
+const BRIDGE_TIMEOUT=5000;
+function hostOf(v){return String(v||'').trim().replace(/^[a-z]+:\/\//i,'').replace(/[\/?#].*$/,'');}
+function cleanKey(v){return String(v||'').trim().replace(/^.*"username"\s*:\s*/i,'').replace(/^["'\s]+|["'\s,}\]]+$/g,'');}
+function bErr(kind,message){const e=new Error(message);e.kind=kind;return e;}
+function bridgeUrl(path,scheme){return `${scheme||S.settings.scheme||'https'}://${hostOf(S.settings.ip)}${path}`;}
+async function bfetch(url,opt={},ms=BRIDGE_TIMEOUT){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),ms);let r;
+  try{r=await fetch(url,{...opt,signal:ac.signal,cache:'no-store'});}
+  catch(e){throw e.name==='AbortError'?bErr('timeout','timed out'):bErr('net','blocked or unreachable');}
+  finally{clearTimeout(tm);}
+  let txt='';try{txt=await r.text();}catch(e){throw bErr('net','connection dropped');}
+  try{return JSON.parse(txt);}catch(e){throw bErr('badreply',`unexpected reply (HTTP ${r.status})`);}}
+async function bridgeTry(path,opt){const order=S.settings.scheme==='http'?['http','https']:['https','http'],errs=[];
+  for(const sc of order){if(sc==='http'&&location.protocol==='https:')continue;
+    try{return {scheme:sc,data:await bfetch(bridgeUrl(path,sc),opt)};}catch(e){errs.push(e);}}
+  throw errs.find(e=>e.kind==='badreply')||errs[0]||bErr('net','unreachable');}
+function bridgeHelp(e,ip){ip=hostOf(ip||S.settings.ip);
+  if(e.kind==='auth')return 'The bridge did not accept the app key. Pair again, or paste a key you created another way (see Help).';
+  if(e.kind==='badreply')return `Something answered at ${ip}, but it does not look like a Hue Bridge. Check the IP address.`;
+  if(e.kind==='timeout')return `No answer from ${ip}. Check the IP address and that this device is on the same network as the bridge.`;
+  if(e.kind==='bridge')return 'The bridge said: '+e.message;
+  return `Could not talk to the bridge at ${ip}. Check the IP address. If it is right, newer bridges need their security certificate accepted once in this browser: use Trust certificate in Setup, accept the warning in the new tab, then try again.`;}
+function trustBridge(){const inp=$('#suIp'),ip=hostOf((inp&&inp.value)||S.settings.ip);if(!ip){msg('Enter the bridge IP first','warn');return;}
+  S.settings.ip=ip;if(inp)inp.value=ip;touch(false);window.open(`https://${ip}/api/0/config`,'_blank');
+  msg('In the new tab, accept the security warning (Advanced, then Proceed or Visit this website). When you see some text about your bridge, close that tab and come back.','warn');}
+const Bridge={
+  base(){return bridgeUrl(`/api/${S.settings.user}`);},
+  async put(path,body){if(MODE==='demo'){await sleep(8+Math.random()*25);return [{success:{}}];}
+    const j=await bfetch(this.base()+path,{method:'PUT',body:JSON.stringify(body)},4000);
+    const err=Array.isArray(j)&&j.find(x=>x.error);if(err)throw new Error(err.error.description);return j;},
+  setLight(id,body){return this.put(`/lights/${id}/state`,body)},
+  setGroup(id,body){return this.put(`/groups/${id}/action`,body)}};
+const isSwitch=f=>!!(f&&f.caps&&f.caps.dim===false);
+function toApi(st,f){if(!st||st.dim<=.4)return {on:false};if(isSwitch(f))return {on:true};
+  const o={on:true,bri:clamp(Math.round(st.dim/100*253)+1,1,254)},c=st.c;
+  if(c&&f.caps.color){if(c.cm==='ct'&&f.caps.ct)o.ct=clamp(Math.round(c.ct),f.ctMin||153,f.ctMax||500);
+    else{const h=toHs(c);o.hue=Math.round(h.h/360*65535)%65536;o.sat=clamp(Math.round(h.s/100*254),0,254);}}
+  else if(c&&f.caps.ct)o.ct=clamp(Math.round(c.cm==='ct'?c.ct:hsToCt(c)),f.ctMin||153,f.ctMax||500);
+  return o;}
+function apiToState(a,prev){if(!a.on)return {dim:0,c:prev?.c};
+  return {dim:a.bri==null?100:(a.bri-1)/253*100,c:a.hue!=null?hsC(a.hue/65535*360,a.sat/254*100):a.ct!=null?ctC(a.ct):prev?.c};}
+function stateFromHue(st){if(!st)return {dim:0,c:ctC(366)};
+  const dim=st.on?Math.max(.5,((st.bri??254)-1)/253*100):0;let c=ctC(st.ct||366);
+  if(st.colormode==='hs')c=hsC(st.hue/65535*360,st.sat/254*100);
+  else if(st.colormode==='xy'&&st.xy){const [r,g,b]=xy2rgb(st.xy[0],st.xy[1]);const o=rgb2hs(r,g,b);c=hsC(o.h,o.s);}
+  return {dim,c};}
+function diffScore(a,b){if(!b)return 1000;if(a.on!==b.on)return 1000;if(!a.on)return 0;
+  let s=Math.abs(a.bri-b.bri)/2.54;
+  if(a.hue!=null){if(b.hue==null)s=Math.max(s,60);else{let d=Math.abs(a.hue-b.hue);d=Math.min(d,65536-d)/182;s=Math.max(s,d/2,Math.abs(a.sat-b.sat)/2.54);}}
+  if(a.ct!=null){if(b.ct==null)s=Math.max(s,60);else s=Math.max(s,Math.abs(a.ct-b.ct)/4);}
+  return s>=1.2?s:0;}
+function lampCur(f,t){const L=RT.lamp[f];if(!L)return RT.base[f]||{dim:0,c:ctC(366)};
+  const p=L.dur<=0?1:clamp((t-L.t0)/L.dur,0,1);return {dim:lerp(L.from.dim,L.to.dim,p),c:lerpC(L.from.c,L.to.c,p)};}
+function setLamp(f,api,L,t){const cur=lampCur(f,t);RT.lamp[f]={from:cur,to:apiToState(api,cur),t0:t,dur:L};}
+function outErr(e){OUT.errs++;if(OUT.errs===1||OUT.errs%20===0)msg('Bridge: '+e.message,'err');}
+function sendLight(fx,api,L,t){const prev=OUT.last[fx.id],body={};
+  if(!prev||prev.on!==api.on)body.on=api.on;
+  if(api.on)for(const k of ['bri','hue','sat','ct'])if(api[k]!=null&&(!prev||prev[k]!==api[k]||!prev.on))body[k]=api[k];
+  if(!isSwitch(fx))body.transitiontime=Math.round(L/100);
+  OUT.last[fx.id]=api;OUT.lastT_[fx.id]=t;setLamp(fx.id,api,L,t);OUT.inflight++;OUT.log.push(t);
+  Bridge.setLight(fx.hueId,body).then(()=>{OUT.errs=0;}).catch(e=>{delete OUT.last[fx.id];outErr(e);}).finally(()=>OUT.inflight--);}
+function tryGroup(dirty,L,t,apis){const by=new Map();
+  for(const d of dirty){const k=JSON.stringify(d.api);let a=by.get(k);if(!a)by.set(k,a=[]);a.push(d);}
+  let best=null;
+  for(const arr of by.values()){if(arr.length<3)continue;const set=new Set(arr.map(d=>d.fx.id));
+    for(const g of S.hueGroups){if(g.lights.length<3||g.lights.length>arr.length)continue;
+      const api=arr[0].api,ok=g.lights.every(f=>set.has(f)||(isSwitch(fixById(f))&&apis[f]&&apis[f].on===api.on));
+      if(ok&&g.lights.some(f=>set.has(f))&&(!best||g.lights.length>best.g.lights.length))best={g,api};}}
+  if(!best)return false;
+  const body={...best.api,transitiontime:Math.round(L/100)};OUT.groupNext=t+1100;
+  const ids=best.g.lights;for(const f of ids){const a=isSwitch(fixById(f))?{on:best.api.on}:best.api;setLamp(f,a,L,t);OUT.last[f]=a;OUT.lastT_[f]=t;}
+  OUT.inflight++;OUT.log.push(t);
+  Bridge.setGroup(best.g.id,body).catch(e=>{for(const f of ids)delete OUT.last[f];outErr(e);}).finally(()=>OUT.inflight--);
+  return true;}
+function schedTick(){
+  const t=now();housekeep(t);if(!RT.connected){OUT.lastT=t;return;}
+  const rate=clamp(+S.settings.rate||10,1,25);
+  OUT.tokens=Math.min(1.5,OUT.tokens+(t-OUT.lastT)/1000*rate);OUT.lastT=t;
+  if(OUT.tokens<1||OUT.inflight>=4)return;
+  const L=clamp(Math.round(Math.max(1,OUT.dirty)*1000/rate/100)*100,100,3000);
+  const goals=evaluate(t+L),dirty=[],apis={};
+  for(const fx of S.fixtures){let g=goals[fx.id];
+    if(!g){if(OUT.force.has(fx.id)&&!RT.blackout)g=RT.base[fx.id];else continue;}if(!g)continue;
+    const api=toApi(g,fx),sc=diffScore(api,OUT.last[fx.id]);apis[fx.id]=api;if(sc>0)dirty.push({fx,api,sc});else OUT.force.delete(fx.id);}
+  OUT.dirty=dirty.length;if(!dirty.length)return;
+  if(S.settings.groupOpt&&t>=OUT.groupNext&&dirty.length>=3&&tryGroup(dirty,L,t,apis)){OUT.tokens-=1;return;}
+  let best=null,bp=-1;for(const d of dirty){const p=Math.min(d.sc,100)*(1+(t-(OUT.lastT_[d.fx.id]||0))/400);if(p>bp){bp=p;best=d;}}
+  OUT.tokens-=1;sendLight(best.fx,best.api,L,t);}
+function setBlackout(on){RT.blackout=on;const t=now();
+  if(on){if(RT.connected){Bridge.setGroup('0',{on:false,transitiontime:0}).catch(outErr);OUT.groupNext=t+1100;OUT.log.push(t);
+      for(const f of S.fixtures){OUT.last[f.id]={on:false};setLamp(f.id,{on:false},0,t);}}}
+  else for(const f of S.fixtures)OUT.force.add(f.id);
+  msg(on?'BLACKOUT':'Blackout released',on?'err':'ok');}
+
+/* ---------------- connection ---------------- */
+async function jfetch(u,opt){const r=await fetch(u,opt);return r.json();}
+function setLed(cls,txt){$('#bridgeLed').className='led '+cls;$('#bridgeTxt').textContent=txt;}
+let pollTimer=0;
+async function connect(){
+  clearInterval(pollTimer);RT.connected=false;
+  if(MODE==='demo'){
+    for(const f of S.fixtures){if(!RT.base[f.id])RT.base[f.id]={dim:f.id%4===0?35:0,c:ctC(400)};const b=RT.base[f.id];RT.lamp[f.id]={from:b,to:b,t0:0,dur:0};OUT.last[f.id]=toApi(b,f);}
+    RT.connected=true;setLed('demo',`DEMO · ${S.fixtures.length} virtual lights`);setTimeout(()=>startTour(),400);return;}
+  const st=S.settings;st.ip=hostOf(st.ip);st.user=cleanKey(st.user);if(!st.ip||!st.user){setLed('','No bridge');return;}
+  if(RT.connecting)return;RT.connecting=true;setLed('busy','Connecting '+st.ip);
+  try{const r=await bridgeTry(`/api/${st.user}/lights`);const lights=r.data;
+    if(Array.isArray(lights)&&lights[0]&&lights[0].error)throw bErr(lights[0].error.type===1?'auth':'bridge',lights[0].error.description);
+    if(!lights||typeof lights!=='object'||Array.isArray(lights))throw bErr('badreply','unexpected reply');
+    st.scheme=r.scheme;let groups={};try{const g=await bfetch(bridgeUrl(`/api/${st.user}/groups`));if(g&&!Array.isArray(g))groups=g;}catch(e){}
+    patchFromBridge(lights,groups);RT.connected=true;OUT.errs=0;
+    setLed('ok',`${st.ip} · ${S.fixtures.length} lights`);msg(`Connected: ${S.fixtures.length} lights patched`,'ok');
+    pollTimer=setInterval(poll,12000);setTimeout(()=>startTour(),400);
+  }catch(e){setLed('err',e.kind==='auth'?'App key rejected':'Bridge unreachable');msg(bridgeHelp(e),'err');}
+  finally{RT.connecting=false;}}
+function patchFromBridge(lights,groups){
+  const seen=new Set(),byUid=new Map(S.fixtures.map(f=>[f.uid,f])),roomOf={},fresh=[];
+  for(const g of Object.values(groups||{}))if(g.type==='Room')for(const l of g.lights||[])roomOf[l]=g.name;
+  for(const [hid,L] of Object.entries(lights||{})){const u=L.uniqueid||('hue-'+hid);seen.add(u);let f=byUid.get(u);if(!f){f={uid:u};fresh.push(f);}
+    const st=L.state||{},ctl=L.capabilities?.control||{};
+    Object.assign(f,{hueId:hid,name:L.name,room:roomOf[hid]||'Unassigned',type:L.type,caps:{color:st.hue!==undefined||st.xy!==undefined,ct:st.ct!==undefined,dim:st.bri!==undefined},
+      ctMin:ctl.ct?.min||153,ctMax:ctl.ct?.max||500,reachable:st.reachable!==false,_st:st});}
+  S.fixtures=S.fixtures.filter(f=>seen.has(f.uid));let next=S.fixtures.reduce((m,f)=>Math.max(m,f.id),0)+1;
+  fresh.sort((a,b)=>(a.room+'\u0000'+a.name).localeCompare(b.room+'\u0000'+b.name)).forEach(f=>{f.id=next++;S.fixtures.push(f);});
+  S.fixtures.sort((a,b)=>a.id-b.id);const byHue=new Map(S.fixtures.map(f=>[f.hueId,f.id]));
+  S.hueGroups=[{id:'0',name:'All lights',type:'All',lights:S.fixtures.map(f=>f.id)}];
+  for(const [gid,g] of Object.entries(groups||{})){if(g.type==='Entertainment')continue;const ls=(g.lights||[]).map(l=>byHue.get(l)).filter(Boolean);if(ls.length)S.hueGroups.push({id:gid,name:g.name,type:g.type,lights:ls});}
+  if(!S.groups.length)autoGroups(S);
+  for(const f of S.fixtures){const b=stateFromHue(f._st);delete f._st;RT.base[f.id]=b;RT.lamp[f.id]={from:b,to:b,t0:0,dur:0};OUT.last[f.id]=toApi(b,f);}
+  touch();}
+async function poll(){if(MODE==='demo'||!RT.connected||document.hidden)return;
+  try{const lights=await bfetch(Bridge.base()+'/lights');if(!lights||Array.isArray(lights))return;const t=now();
+    for(const f of S.fixtures){const L=lights[f.hueId];if(!L)continue;f.reachable=L.state.reachable!==false;
+      if(t-(OUT.lastT_[f.id]||0)<4000)continue;const b=stateFromHue(L.state),api=toApi(b,f);
+      if(diffScore(api,OUT.last[f.id])>3){OUT.last[f.id]=api;if(!RT.wasCtl[f.id]){RT.base[f.id]=b;RT.lamp[f.id]={from:b,to:b,t0:0,dur:0};}}}
+  }catch(e){}}
+async function discover(){const out=$('#suDiscRes');out.className='hint';out.textContent='Searching...';
+  try{const j=await bfetch('https://discovery.meethue.com/',{},8000);
+    if(!Array.isArray(j)||!j.length){out.textContent='No bridges found via discovery. Find the IP in the Hue app: Settings > My Hue system > Bridge.';return;}
+    out.innerHTML='Found: '+j.map(b=>`<button class="btn" data-ip="${esc(b.internalipaddress)}">${esc(b.internalipaddress)}</button>`).join(' ');
+    $$('[data-ip]',out).forEach(b=>b.onclick=()=>{$('#suIp').value=b.dataset.ip;S.settings.ip=b.dataset.ip;touch(false);});
+  }catch(e){out.className='hint err';out.textContent='Discovery did not work ('+e.message+'). It is a Philips web service, limited to one lookup every few minutes. Enter the IP by hand: Hue app > Settings > My Hue system > Bridge.';}}
+async function pair(){if(RT.pairing)return;const m=$('#suPairMsg'),ip=hostOf($('#suIp').value);
+  const say=(t,c='')=>{if(m){m.className='hint'+(c?' '+c:'');m.textContent=t;}};
+  if(!ip){say('Enter the bridge IP first.','err');return;}
+  S.settings.ip=ip;$('#suIp').value=ip;touch(false);RT.pairing=true;
+  try{say('Looking for the bridge...');let sc;
+    try{const r=await bridgeTry('/api/0/config');if(!r.data||Array.isArray(r.data)||!(r.data.bridgeid||r.data.name))throw bErr('badreply','not a Hue Bridge');sc=r.scheme;}
+    catch(e){say(bridgeHelp(e,ip),'err');return;}
+    S.settings.scheme=sc;const end=Date.now()+30000;
+    while(Date.now()<end){say(`Bridge found. Press the round link button on top of the bridge now... ${Math.ceil((end-Date.now())/1000)}s`);
+      let j;try{j=await bfetch(bridgeUrl('/api',sc),{method:'POST',body:JSON.stringify({devicetype:'huedesk#'+(window.HUEDESK_DEVICE||'browser')})});}
+      catch(e){say(bridgeHelp(e,ip),'err');return;}
+      const ok=Array.isArray(j)&&j.find(x=>x.success&&x.success.username);
+      if(ok){S.settings.user=ok.success.username;$('#suUser').value=S.settings.user;touch(false);say('Paired. Now press Connect.','ok');return;}
+      const er=Array.isArray(j)&&j.find(x=>x.error);if(er&&er.error.type!==101){say('The bridge said: '+er.error.description,'err');return;}
+      await sleep(1500);}
+    say('Timed out waiting for the link button. Press Pair and try again, or create a key another way (see Help).','err');
+  }finally{RT.pairing=false;}}
+function switchMode(m){saveShow();MODE=m;store.set('huedesk.mode',m);
+  Object.assign(RT,{sel:[],selAll:null,prog:{},pfx:[],live:{},base:{},lamp:{},wasCtl:{},oops:[],blackout:false,highlight:false,blind:false,selExec:0,armed:null});
+  RT.ex=Array.from({length:NEX},newXr);RT.trackCache.clear();OUT.last={};OUT.force.clear();OUT.lastT_={};
+  S=loadShow();renderAll();connect();}
+
+/* ---------------- command line ---------------- */
+const KW={fixture:'fix',fix:'fix',f:'fix',channel:'fix',ch:'fix',group:'grp',grp:'grp',g:'grp',thru:'thru',through:'thru',t:'thru',at:'at','@':'at',full:'full',zero:'zero',
+  cue:'cue',c:'cue',executor:'exec',exec:'exec',exe:'exec',e:'exec',store:'store',st:'store',update:'update',go:'go','go+':'go',goback:'back','go-':'back',back:'back',
+  off:'off',goto:'goto',pause:'pause',delete:'del',del:'del',label:'label',lab:'label',clear:'clear',clearall:'clearall',oops:'oops',undo:'oops',
+  blackout:'bo',bo:'bo',highlight:'hl',hl:'hl',blind:'blind',macro:'macro',m:'macro',preset:'preset',p:'preset',scene:'scene',sc:'scene',effect:'fx',fx:'fx',
+  speedmaster:'sm',speed:'sm',sm:'sm',fade:'fade',odd:'odd',even:'even',next:'next',prev:'prev',previous:'prev',all:'all',hue:'hue',sat:'sat',saturation:'sat',
+  ct:'ct',kelvin:'ct',k:'ct',please:'please',knockout:'ko',ko:'ko',on:'on','/merge':'merge','/m':'merge','/overwrite':'overwrite','/o':'overwrite',release:'release',invert:'invert',grand:'gm',gm:'gm'};
+function tokenize(s){const T=[],re=/"([^"]*)"|(\d+(?:\.\d+)?)|([+\-;])|([^\s"+;]+)/g;let m;
+  while((m=re.exec(s))){if(m[1]!=null)T.push({t:'str',v:m[1],raw:m[0]});else if(m[2]!=null)T.push({t:'num',v:+m[2],raw:m[2]});
+    else if(m[3]!=null)T.push({t:'sym',v:m[3],raw:m[3]});else{const w=m[4].toLowerCase();T.push(KW[w]?{t:'kw',v:KW[w],raw:m[4]}:{t:'word',v:w,raw:m[4]});}}return T;}
+function runCommand(src){if(RT.macroDepth>8)return;src.split(/[;\n]/).map(s=>s.trim()).filter(Boolean).forEach(exec1);}
+function exec1(src){
+  const T=tokenize(src);if(!T.length)return;let i=0;
+  const pk=(o=0)=>T[i+o],isK=(k,o=0)=>pk(o)&&pk(o).t==='kw'&&pk(o).v===k,isN=(o=0)=>pk(o)&&pk(o).t==='num',isS=(v,o=0)=>pk(o)&&pk(o).t==='sym'&&pk(o).v===v;
+  const num=()=>isN()?T[i++].v:null;
+  const list=()=>{const out=[];let mode='+',any=false;
+    while(i<T.length){if(isN()){let a=T[i++].v,b=a;if(isK('thru')){i++;if(isN())b=T[i++].v;}
+        const rng=[];if(Number.isInteger(a)&&Number.isInteger(b)){const st=a<=b?1:-1;for(let x=a;st>0?x<=b:x>=b;x+=st)rng.push(x);}else rng.push(a);
+        if(mode==='+')rng.forEach(x=>{if(!out.includes(x))out.push(x);});else rng.forEach(x=>{const j=out.indexOf(x);if(j>=0)out.splice(j,1);});any=true;continue;}
+      if((isS('+')||isS('-'))&&isN(1)){mode=T[i++].v;continue;}break;}return any?out:null;};
+  const execs=()=>{if(isK('exec')){i++;return (list()||[]).map(x=>x-1).filter(x=>x>=0&&x<NEX);}return [RT.selExec];};
+  const onoff=cur=>{if(isK('on')){i++;return true;}if(isK('off')){i++;return false;}return !cur;};
+  const presetTok=()=>{const t=pk();if(!t||t.t!=='num'){msg('Preset needs a number, e.g. Preset 4.3','err');return;}i++;
+    const [a,b]=t.raw.split('.');if(b==null)return {type:4,slot:+a};return {type:+a,slot:+b};};
+  const applyPreset=p=>{if(!p)return;if(p.type===1){const v=DIMMERS[p.slot-1];if(v==null){msg('Dimmer presets are 1.1 to 1.6','err');return;}setDimSel(v);}
+    else{const c=slotOf(S.colours,p.slot);if(!c){msg(`Colour preset ${p.slot} is empty`,'err');return;}applyColour(c.c);}};
+  const f0=pk();
+  if(f0.t==='kw'){switch(f0.v){
+    case 'store':{i++;let mode=null;const opt=()=>{if(isK('merge')){i++;mode='merge';}else if(isK('overwrite')){i++;mode='overwrite';}};opt();
+      if(isK('cue')){i++;const n=num();const ex=execs();opt();storeCue(ex[0]??RT.selExec,n,mode);}
+      else if(isK('grp')){i++;storeToPool('groups',num()??1);}
+      else if(isK('preset')){i++;const p=presetTok();if(p)storeToPool('colours',p.slot);}
+      else if(isK('scene')){i++;storeToPool('scenes',num()??1);}
+      else if(isK('exec')){const ex=execs();opt();storeCue(ex[0]??RT.selExec,null,mode);}
+      else storeCue(RT.selExec,null,mode);return;}
+    case 'update':i++;updateCue(RT.selExec);return;
+    case 'go':i++;execs().forEach(e=>execGo(e));return;
+    case 'back':i++;execs().forEach(e=>execBack(e));return;
+    case 'pause':i++;execs().forEach(e=>execPause(e));return;
+    case 'off':i++;execs().forEach(e=>execOff(e));return;
+    case 'goto':{i++;if(isK('cue'))i++;const n=num();const ex=execs();if(n==null){msg('Goto needs a cue number','err');return;}ex.forEach(e=>execGoto(e,n));return;}
+    case 'exec':{const ex=execs();if(isK('at')){i++;let v=isK('full')?(i++,100):num();if(v==null)return;ex.forEach(e=>setLevel(e,v/100));}
+      else if(ex.length){RT.selExec=ex[0];renderCues();}return;}
+    case 'del':{i++;
+      if(isK('cue')){i++;const n=num();const ex=execs();ex.forEach(e=>{const j=S.executors[e].cues.findIndex(c=>Math.abs(c.num-n)<1e-6);if(j>=0)deleteCue(e,j);else msg(`Cue ${n} not found`,'err');});return;}
+      const map={grp:'groups',scene:'scenes',fx:'effects',macro:'macros',preset:'colours'};const k=pk()&&map[pk().v];
+      if(k){i++;const n=pk().v===undefined?null:(k==='colours'?(presetTok()||{}).slot:num());const arr=S[k],j=arr.findIndex(x=>x.slot===n);
+        if(j>=0){arr.splice(j,1);touch();msg(`Deleted ${k.slice(0,-1)} ${n}`,'ok');}else msg('Nothing there','warn');}
+      else msg('Delete what? e.g. Delete Cue 3 Executor 1','err');return;}
+    case 'label':{i++;const map={grp:'groups',scene:'scenes',fx:'effects',macro:'macros',preset:'colours'};
+      if(isK('cue')){i++;const n=num(),ex=execs(),nm=pk()&&pk().t==='str'?T[i++].v:'';const c=S.executors[ex[0]].cues.find(c=>Math.abs(c.num-n)<1e-6);if(c){c.name=nm;touch();}return;}
+      if(isK('exec')){const ex=execs(),nm=pk()&&pk().t==='str'?T[i++].v:'';if(ex.length){S.executors[ex[0]].label=nm;touch();}return;}
+      const k=pk()&&map[pk().v];if(k){i++;const n=k==='colours'?(presetTok()||{}).slot:num(),nm=pk()&&pk().t==='str'?T[i++].v:'';const it=slotOf(S[k],n);if(it){it.name=nm;touch();}}return;}
+    case 'clear':clearSmart();return;
+    case 'clearall':clearAll();return;
+    case 'release':releaseAll();return;
+    case 'oops':oops();return;
+    case 'bo':i++;setBlackout(onoff(RT.blackout));return;
+    case 'hl':i++;RT.highlight=onoff(RT.highlight);return;
+    case 'blind':i++;RT.blind=onoff(RT.blind);return;
+    case 'macro':{i++;const n=num();const m=slotOf(S.macros,n);if(m)runMacro(m);else msg(`Macro ${n} is empty`,'err');return;}
+    case 'sm':{i++;const n=num()??1;if(isK('at'))i++;const v=num();if(v!=null&&S.sm[n-1]){S.sm[n-1].bpm=clamp(v,.5,300);touch(false);}return;}
+    case 'gm':{i++;if(isK('at'))i++;const v=isK('full')?(i++,100):num();if(v!=null)RT.gm=clamp(v/100,0,1);return;}
+    case 'fade':{i++;const v=num();if(v!=null){RT.progFade=clamp(v,0,60);msg(`Programmer fade ${v}s`,'ok');}return;}
+    case 'ko':knockout();return;
+    case 'invert':invertSel();return;
+  }}
+  // selection
+  while(i<T.length){
+    if(isN()){setSel(list()||[]);continue;}
+    if(isK('fix')){i++;setSel(list()||[]);continue;}
+    if(isK('grp')){i++;const l=list()||[],fs=[];l.forEach(g=>{const G=slotOf(S.groups,g);if(G)G.fixtures.forEach(f=>{if(!fs.includes(f))fs.push(f);});else msg(`Group ${g} is empty`,'warn');});setSel(fs);continue;}
+    if(isK('all')){i++;setSel(S.fixtures.map(f=>f.id));continue;}
+    if(isK('odd')){i++;selOddEven(true);continue;}
+    if(isK('even')){i++;selOddEven(false);continue;}
+    if(isK('next')){i++;selStep(1);continue;}
+    if(isK('prev')){i++;selStep(-1);continue;}
+    break;}
+  // attributes
+  while(i<T.length){
+    if(isK('at')){i++;
+      if(isK('full')){i++;setDimSel(100);}else if(isK('zero')){i++;setDimSel(0);}
+      else if((isS('+')||isS('-'))&&isN(1)){const s=T[i++].v==='-'?-1:1;setDimSel(s*T[i++].v,true);}
+      else if(isK('preset')){i++;applyPreset(presetTok());}
+      else if(isN()){setDimSel(T[i++].v);}else{msg('At what? e.g. At 50 or At Full','err');return;}continue;}
+    if(isK('full')){i++;setDimSel(100);continue;}
+    if(isK('hue')){i++;const v=num();if(v!=null)encSet('hue',v);continue;}
+    if(isK('sat')){i++;const v=num();if(v!=null)encSet('sat',v);continue;}
+    if(isK('ct')){i++;const v=num();if(v!=null)encSet('ct',v);continue;}
+    if(isK('preset')){i++;applyPreset(presetTok());continue;}
+    if(isK('scene')){i++;const s=slotOf(S.scenes,num());if(s)applyScene(s);else msg('Scene is empty','err');continue;}
+    if(isK('fx')){i++;if(isK('off')){i++;removeProgFx(RT.sel);progTouched();continue;}const n=num();if(n!=null&&effBySlot(n))toggleEffect(n);else msg('Effect not found','err');continue;}
+    if(isK('please')){i++;continue;}
+    break;}
+  if(i<T.length)msg('Did not understand: '+T.slice(i).map(x=>x.raw).join(' '),'err');}
+function runMacro(m){RT.macroDepth++;try{runCommand(m.lines);}finally{RT.macroDepth--;}msg(`Macro ${m.name}`,'ok');}
+function setLevel(e,v){const xr=RT.ex[e],was=xr.level;xr.level=clamp(v,0,1);if(was<=.001&&xr.level>.001&&!xr.active&&S.executors[e].cues.length)execGo(e);}
+
+/* ---------------- feedback ---------------- */
+let msgTimer=0;
+function msg(text,type=''){const el=$('#fb');el.textContent=text;el.className='fb '+type;clearTimeout(msgTimer);msgTimer=setTimeout(()=>{el.textContent='';},type==='err'?9000:5000);}
+
+/* ---------------- UI: widgets ---------------- */
+function arcPath(r,a0,a1){const p=a=>[30+r*Math.cos(a*Math.PI/180),30+r*Math.sin(a*Math.PI/180)];const [x0,y0]=p(a0),[x1,y1]=p(a1);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;}
+const ENC={dim:{label:'DIM',px:.5,wh:5},hue:{label:'HUE',px:1.5,wh:10},sat:{label:'SAT',px:.5,wh:5},ct:{label:'CT',px:1.2,wh:10},fade:{label:'FADE',px:.05,wh:.5}};
+function buildEncoders(){$$('.enc').forEach(el=>{const a=el.dataset.enc,E=ENC[a];
+  el.innerHTML=`<div class="el">${E.label}</div><svg viewBox="0 0 60 60"><path class="eb" d="${arcPath(22,135,405)}"/><path class="ev"/></svg><div class="evl">-</div>`;
+  let y=0,drag=false;
+  el.addEventListener('pointerdown',e=>{drag=true;y=e.clientY;el.setPointerCapture(e.pointerId);});
+  el.addEventListener('pointermove',e=>{if(!drag)return;const d=(y-e.clientY)*E.px*(e.shiftKey?.2:1);y=e.clientY;if(d)encChange(a,d);});
+  el.addEventListener('pointerup',()=>drag=false);el.addEventListener('pointercancel',()=>drag=false);
+  el.addEventListener('wheel',e=>{e.preventDefault();encChange(a,(e.deltaY<0?1:-1)*E.wh*(e.shiftKey?.2:1));},{passive:false});
+  el.addEventListener('dblclick',()=>{const u={dim:'%',hue:'degrees',sat:'%',ct:'Kelvin (2000-6500)',fade:'seconds'}[a];
+    promptModal(`Set ${E.label} (${u})`,'',v=>{if(v.trim()!=='')encSet(a,+v);},'number');});});}
+function encGet(a){if(a==='fade')return {txt:RT.progFade.toFixed(1)+'s',n:RT.progFade/10,pv:RT.progFade>0};
+  const f=RT.sel[0];if(f==null)return {txt:'-',n:0,pv:false};const pv=RT.prog[f];
+  if(a==='dim'){const v=pv&&pv.dim?pv.dim.v:(RT.live[f]?.dim??0);return {txt:Math.round(v)+'%',n:v/100,pv:!!(pv&&pv.dim)};}
+  const c=pv&&pv.c?pv.c.v:RT.live[f]?.c,isP=!!(pv&&pv.c);if(!c)return {txt:'-',n:0,pv:false};
+  if(a==='ct')return c.cm==='ct'?{txt:Math.round(1e6/c.ct/10)*10+'K',n:(500-c.ct)/347,pv:isP}:{txt:'-',n:0,pv:false};
+  const h=toHs(c);if(c.cm==='ct')return {txt:'-',n:0,pv:false};
+  return a==='hue'?{txt:Math.round(h.h)+'°',n:h.h/360,pv:isP}:{txt:Math.round(h.s)+'%',n:h.s/100,pv:isP};}
+function makeFader(el,o){el.classList.add('fader');el.innerHTML='<div class="ftrack"><div class="ffill"></div><div class="fcap"></div></div><div class="fval"></div>';
+  const tr=$('.ftrack',el);let drag=false;
+  const at=e=>{const r=tr.getBoundingClientRect();o.set(clamp(1-(e.clientY-r.top-7)/(r.height-14),0,1));};
+  tr.addEventListener('pointerdown',e=>{drag=true;tr.setPointerCapture(e.pointerId);at(e);});
+  tr.addEventListener('pointermove',e=>{if(drag)at(e);});tr.addEventListener('pointerup',()=>drag=false);tr.addEventListener('pointercancel',()=>drag=false);
+  el.addEventListener('wheel',e=>{e.preventDefault();o.set(clamp(o.get()+(e.deltaY<0?.05:-.05),0,1));},{passive:false});
+  el.addEventListener('dblclick',()=>o.set(o.get()>.5?0:1));
+  el._paint=()=>{const v=o.get();if(el._v===v)return;el._v=v;el.style.setProperty('--v',v);$('.fval',el).textContent=Math.round(v*100);};}
+
+/* ---------------- UI: render ---------------- */
+let tileEls={};
+function renderAll(){$('#showName').textContent=S.name;renderFixtures();renderPools();renderCues();buildExecs();selChanged();}
+function renderFixtures(){const host=$('#fixGrid');tileEls={};
+  if(!S.fixtures.length){host.innerHTML=`<div class="hint" style="padding:30px;text-align:center">No fixtures patched yet. Open <b>Setup</b> to connect your Hue Bridge, or start demo mode.</div>`;renderSheet();return;}
+  const rooms=new Map();for(const f of S.fixtures){const r=f.room||'Unassigned';if(!rooms.has(r))rooms.set(r,[]);rooms.get(r).push(f);}
+  host.innerHTML=[...rooms].map(([r,fs])=>`<div class="room"><div class="roomh" data-room="${esc(r)}">${esc(r)} <span style="color:var(--tx3)">${fs.length}</span></div><div class="fxs">${fs.map(f=>
+    `<div class="fx${f.reachable===false?' unr':''}" data-f="${f.id}" title="${esc(f.name)} · ${esc(f.type||'')}${f.reachable===false?' · unreachable':''}"><div class="fxc"></div><span class="fxn">${f.id}</span><span class="fxd"></span><span class="fxe">FX</span><span class="fxname">${esc(f.name)}</span><i class="fxlamp"></i></div>`).join('')}</div></div>`).join('');
+  $$('.fx',host).forEach(el=>tileEls[el.dataset.f]=el);renderSheet();}
+function renderSheet(){const host=$('#fixSheet');
+  host.innerHTML=`<table class="sheet"><thead><tr><th>No</th><th>Name</th><th>Room</th><th>Dim</th><th>Colour</th><th>Source</th><th>Lamp</th></tr></thead><tbody>${S.fixtures.map(f=>
+    `<tr data-f="${f.id}"><td class="num">${f.id}</td><td>${esc(f.name)}</td><td style="color:var(--tx2)">${esc(f.room||'')}</td><td class="num sd"></td><td class="sc"></td><td class="ss" style="color:var(--tx2)"></td><td class="sl"></td></tr>`).join('')}</tbody></table>`;}
+const POOLS={groups:{},colours:{},effects:{},scenes:{},macros:{}};
+function renderPools(){for(const k in POOLS){const el=$(`#pool-${k} .pg`),items=S[k];
+  const max=Math.max(k==='colours'?24:12,...items.map(x=>x.slot))+(k==='colours'?2:4);let h='';
+  for(let s=1;s<=max;s++){const it=slotOf(items,s);
+    if(!it){h+=`<div class="pt empty" data-p="${k}" data-s="${s}"><span class="ps">${s}</span></div>`;continue;}
+    let extra='';if(k==='colours')extra=`<i class="psw" style="background:${c2hex(it.c)}"></i>`;
+    if(k==='effects')extra=`<i class="pfx">${FX_ICON[it.type]||''}</i>`;
+    h+=`<div class="pt" data-p="${k}" data-s="${s}" title="${esc(it.name)}"><span class="ps">${s}</span>${extra}<span class="pn">${esc(it.name)}</span></div>`;}
+  el.innerHTML=h;}paintPools();}
+function paintPools(){const selKey=[...RT.sel].sort((a,b)=>a-b).join(',');
+  $$('#pool-groups .pt').forEach(el=>{const g=slotOf(S.groups,el.dataset.s);el.classList.toggle('act',!!g&&RT.sel.length>0&&[...g.fixtures].sort((a,b)=>a-b).join(',')===selKey);});
+  const on=new Set(RT.pfx.map(x=>x.slot));$$('#pool-effects .pt').forEach(el=>el.classList.toggle('act',on.has(+el.dataset.s)));}
+function renderCues(){const e=RT.selExec,ex=S.executors[e],xr=RT.ex[e];
+  $('#cueTitle').textContent=`Exec ${e+1}${ex.label?' · '+ex.label:''}`;
+  $('#cueMode').textContent=ex.mode==='chase'?`chaser · ${ex.sm?'SM'+ex.sm:Math.round(ex.bpm)+' bpm'} · xfade ${ex.xfade}%`:'sequence';
+  $('#cueBody').innerHTML=ex.cues.length?ex.cues.map((c,i)=>`<tr data-i="${i}" class="${i===xr.cueSel?'csel':''}"><td class="cm"></td><td class="cn">${fmtNum(c.num)}</td><td class="cnm" data-ed="name">${c.name?esc(c.name):'<span class="dim">-</span>'}</td><td class="cf" data-ed="fade">${fmtNum(c.fade)}</td><td class="cd" data-ed="delay">${fmtNum(c.delay||0)}</td><td class="cc">${Object.keys(c.values).length}${c.effects&&c.effects.length?`<span class="fxb">FX</span>`:''}</td></tr>`).join('')
+    :`<tr><td colspan="6" class="empty">No cues yet.<br>Select fixtures, set a look, press <b style="color:var(--red)">STORE</b> and click this executor's header.</td></tr>`;
+  $$('.exec').forEach((el,i)=>el.classList.toggle('selx',i===e));}
+const faders=[];
+function buildExecs(){const host=$('#execRow');if(host.children.length===NEX)return;host.innerHTML='';faders.length=0;
+  for(let e=0;e<NEX;e++){const d=document.createElement('div');d.className='exec';d.dataset.e=e;
+    d.innerHTML=`<div class="exh"><div class="exl1"><span class="exn">${e+1}</span><span class="exlab"></span><span class="exmode"></span></div><div class="excur"></div><div class="exnext"></div><div class="exbar"><i></i></div></div>
+      <div class="exb"><div class="fd"></div><div class="exbtns"><button class="xb go" data-x="go">GO</button><button class="xb" data-x="b2">GO-</button><button class="xb" data-x="off">OFF</button><button class="xb fl" data-x="flash">FLASH</button></div></div>`;
+    host.appendChild(d);const fd=$('.fd',d);makeFader(fd,{get:()=>RT.ex[e].level,set:v=>setLevel(e,v)});faders.push(fd);
+    const fl=$('[data-x=flash]',d);
+    fl.addEventListener('pointerdown',ev=>{if(RT.armed)return;fl.setPointerCapture(ev.pointerId);RT.ex[e].flash=true;});
+    const up=()=>{RT.ex[e].flash=false;};fl.addEventListener('pointerup',up);fl.addEventListener('pointercancel',up);}
+  renderCues();}
+
+/* ---------------- UI: paint loop ---------------- */
+let wheelImg=null,wheelSig=null,clockSec=-1;
+function drawWheelBase(){const cv=$('#wheel'),ctx=cv.getContext('2d'),W=cv.width,R=W/2-2,img=ctx.createImageData(W,W);
+  for(let y=0;y<W;y++)for(let x=0;x<W;x++){const dx=x-W/2,dy=y-W/2,r=Math.hypot(dx,dy);if(r>R+1)continue;
+    const h=(Math.atan2(dy,dx)*180/Math.PI+360)%360,[cr,cg,cb]=hsv2rgb(h,Math.min(1,r/R),1),o=(y*W+x)*4;
+    img.data[o]=cr;img.data[o+1]=cg;img.data[o+2]=cb;img.data[o+3]=255*clamp(R+1-r,0,1);}
+  wheelImg=img;
+  const cb=$('#ctbar'),c2=cb.getContext('2d'),g=c2.createLinearGradient(0,0,0,cb.height);
+  for(let i=0;i<=10;i++){const m=153+347*i/10;g.addColorStop(i/10,`rgb(${k2rgb(1e6/m).map(v=>v|0).join(',')})`);}
+  c2.fillStyle=g;c2.fillRect(0,0,cb.width,cb.height);}
+function paintWheel(){const fs=RT.sel.slice(0,48),sig=fs.map(f=>{const c=progCV(f);return c.cm==='ct'?'t'+Math.round(c.ct):Math.round(c.h)+'/'+Math.round(c.s);}).join('|');
+  if(sig===wheelSig)return;wheelSig=sig;const cv=$('#wheel'),ctx=cv.getContext('2d'),W=cv.width,R=W/2-2;ctx.putImageData(wheelImg,0,0);
+  fs.forEach((f,i)=>{const c=progCV(f);if(c.cm==='ct')return;const a=c.h*Math.PI/180,r=c.s/100*R,x=W/2+Math.cos(a)*r,y=W/2+Math.sin(a)*r;
+    ctx.beginPath();ctx.arc(x,y,i?6:11,0,Math.PI*2);ctx.lineWidth=i?2:4;ctx.strokeStyle=i?'rgba(0,0,0,.7)':'#000';ctx.stroke();
+    if(!i){ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();}});
+  const cb=$('#ctbar'),c2=cb.getContext('2d');drawWheelBaseCt(c2,cb);
+  const f=fs[0];if(f!=null){const c=progCV(f);if(c.cm==='ct'){const y=(c.ct-153)/347*cb.height;c2.fillStyle='#000';c2.fillRect(0,y-4,cb.width,8);c2.fillStyle='#fff';c2.fillRect(2,y-2,cb.width-4,4);}}}
+function drawWheelBaseCt(c2,cb){const g=c2.createLinearGradient(0,0,0,cb.height);for(let i=0;i<=10;i++){const m=153+347*i/10;g.addColorStop(i/10,`rgb(${k2rgb(1e6/m).map(v=>v|0).join(',')})`);}c2.fillStyle=g;c2.fillRect(0,0,cb.width,cb.height);}
+function paint(t){
+  const sel=new Set(RT.sel),fxOn=new Set();RT.pfx.forEach(x=>x.fixtures.forEach(f=>fxOn.add(+f)));
+  if(RT.view==='grid'){for(const f in tileEls){const el=tileEls[f],L=RT.live[f]||{dim:0},lamp=lampCur(f,t);
+    const o=L.dim<=.4?0:.25+.75*L.dim/100,col=c2hex(L.c),lc=cCss(lamp.c,lamp.dim),dt=isSwitch(fixById(f))?(L.dim>.4?'ON':'OFF'):Math.round(L.dim)+'';
+    if(el._o!==o){el.style.setProperty('--o',o);el._o=o;}if(el._c!==col){el.style.setProperty('--c',col);el._c=col;}if(el._l!==lc){el.style.setProperty('--l',lamp.dim<=.4?'#000':lc);el._l=lc;}
+    if(el._d!==dt){el.children[2].textContent=dt;el._d=dt;}
+    const cls=`fx${sel.has(+f)?' sel':''}${RT.prog[f]?' prog':''}${L.rel?' rel':''}${fxOn.has(+f)?' hasfx':''}${fixById(f)?.reachable===false?' unr':''}`;
+    if(el._cls!==cls){el.className=cls;el._cls=cls;}}}
+  else{$$('#fixSheet tr[data-f]').forEach(tr=>{const f=tr.dataset.f,L=RT.live[f]||{dim:0},lamp=lampCur(f,t),pv=RT.prog[f];
+    tr.classList.toggle('sel',sel.has(+f));const c=tr.children;c[3].textContent=Math.round(L.dim)+'%';c[3].classList.toggle('pv',!!(pv&&pv.dim));
+    c[4].innerHTML=`<span class="sw" style="background:${c2hex(L.c)}"></span>${cName(L.c)}`;c[4].classList.toggle('pv',!!(pv&&pv.c));
+    c[5].textContent=L.src||(L.rel?'released':'');c[6].innerHTML=`<span class="sw" style="background:${lamp.dim<=.4?'#000':cCss(lamp.c,lamp.dim)}"></span>${Math.round(lamp.dim)}%`;});}
+  // programmer
+  $$('.enc').forEach(el=>{const g=encGet(el.dataset.enc),k=g.txt+g.pv+g.n.toFixed(3);if(el._k===k)return;el._k=k;
+    el.classList.toggle('pv',g.pv);$('.evl',el).textContent=g.txt;$('.ev',el).setAttribute('d',g.n>.002?arcPath(22,135,135+270*clamp(g.n,0,1)):'');});
+  paintWheel();
+  const f0=RT.sel[0];
+  if(f0!=null){const L=RT.live[f0]||{dim:0},fx=fixById(f0),pv=RT.prog[f0];const c=progCV(f0);
+    $('#swatch').style.background=c2hex(c);$('#swatchTxt').textContent=cName(c);
+    const k=`${f0}|${Math.round(L.dim)}|${cName(L.c)}|${L.src}|${!!pv}|${RT.sel.length}`;
+    if($('#readout')._k!==k){$('#readout')._k=k;$('#readout').innerHTML=`<b>${f0} · ${esc(fx?.name)}</b>${RT.sel.length>1?` <span style="color:var(--tx3)">+${RT.sel.length-1}</span>`:''}<br>Out <b>${Math.round(L.dim)}%</b> ${cName(L.c)}<br>Src <span class="${pv?'pv':''}">${L.src||(L.rel?'released':'-')}</span>${fx&&!fx.caps.color?(fx.caps.ct?' · white only':isSwitch(fx)?' · on/off only':' · dim only'):''}`;}}
+  else{$('#swatch').style.background='#000';$('#swatchTxt').textContent='';if($('#readout')._k!=='none'){$('#readout')._k='none';$('#readout').innerHTML='<span style="color:var(--tx3)">No selection.<br>Click fixtures or a group.</span>';}}
+  const nP=Object.keys(RT.prog).length;$('#progInfo').textContent=`${RT.sel.length} sel · ${nP} active${RT.pfx.length?` · ${RT.pfx.length} fx`:''}`;
+  $('#fBlind').classList.toggle('on',RT.blind);$('#fHl').classList.toggle('on',RT.highlight);
+  $('#kHl').classList.toggle('lit',RT.highlight);$('#kBlind').classList.toggle('lit',RT.blind);
+  $('#alignBtn').textContent='ALIGN '+['OFF','>','<','><'][RT.align];$('#alignBtn').classList.toggle('on',RT.align>0);
+  // executors
+  $$('.exec').forEach((el,e)=>{const ex=S.executors[e],xr=RT.ex[e],n=ex.cues.length;
+    let cur='',next='',bar=0;const on=xr.active&&!xr.off;
+    if(ex.mode==='chase'){if(xr.active){const pos=chasePos(e,t),k=Math.floor(pos),idx=((k%n)+n)%n,c=ex.cues[idx];cur=`${idx+1}/${n} ${c?c.name||'':''}`;bar=pos-k;}
+      next=`${xr.paused?'PAUSED · ':''}${ex.sm?'SM'+ex.sm+' ':''}${Math.round(ex.sm?S.sm[ex.sm-1].bpm:ex.bpm)} bpm`;}
+    else{if(xr.active){const c=ex.cues[xr.cueIdx];cur=c?`${fmtNum(c.num)} ${c.name||''}`:'';const F=xr.fade;if(F){const st=F.t0+F.delay;bar=F.dur<=0?1:clamp((t-st)/F.dur,0,1);}}
+      const ni=xr.active?xr.cueIdx+1:0,nc=ex.cues[ni>=n?0:ni];next=nc?`Next ${fmtNum(nc.num)} ${nc.name||''}`:'';}
+    if(xr.off)bar=1-clamp((t-xr.off.t0)/Math.max(1,xr.off.dur),0,1);
+    const k=[ex.label,ex.mode,cur,next,on,!!xr.off,n].join('|');
+    if(el._k!==k){el._k=k;$('.exlab',el).textContent=ex.label||(n?'':'empty');$('.exmode',el).textContent=n?(ex.mode==='chase'?'CHS':'SEQ'):'';
+      const cc=$('.excur',el);cc.textContent=xr.active?(xr.off?'off...':cur):(n?`off · ${n} cue${n>1?'s':''}`:'');cc.classList.toggle('off',!on);
+      $('.exnext',el).textContent=next;el.classList.toggle('on',on);el.classList.toggle('offing',!!xr.off);
+      $('[data-x=b2]',el).textContent=ex.mode==='chase'?(xr.paused?'RESUME':'PAUSE'):'GO-';}
+    $('.exbar i',el).style.width=(bar*100)+'%';
+    $('[data-x=flash]',el).classList.toggle('on',xr.flash);$('[data-x=b2]',el).classList.toggle('on',ex.mode==='chase'&&xr.paused);
+    faders[e]&&faders[e]._paint();});
+  // cue list markers
+  {const e=RT.selExec,xr=RT.ex[e],ex=S.executors[e];$$('#cueBody tr[data-i]').forEach(tr=>{const i=+tr.dataset.i;
+    const isCur=xr.active&&!xr.off&&(ex.mode==='chase'?(((Math.floor(chasePos(e,t))%ex.cues.length)+ex.cues.length)%ex.cues.length)===i:xr.cueIdx===i);
+    const F=xr.fade,fading=isCur&&ex.mode!=='chase'&&F&&t<F.t0+F.delay+F.dur;
+    tr.classList.toggle('ccur',isCur&&!fading);tr.classList.toggle('cfade',!!fading);});}
+  // masters
+  $('#gmFader')._paint();
+  $$('.sm').forEach((el,i)=>{const b=S.sm[i].bpm;const tx=b<10?b.toFixed(1):Math.round(b)+'';const s=$('.smv span',el);if(s.textContent!==tx)s.textContent=tx;
+    const ph=smPhase(i,t)%1;$('.smled',el).classList.toggle('on',ph<.15);});
+  $('#boBtn').classList.toggle('on',RT.blackout);
+  // top bar
+  while(OUT.log.length&&OUT.log[0]<t-1000)OUT.log.shift();const r=OUT.log.length,rate=+S.settings.rate||10;
+  $('#rateBar').style.width=clamp(r/rate*100,0,100)+'%';$('#rateTxt').textContent=r+'/s';$('#queueTxt').textContent='Q'+OUT.dirty;
+  const d=new Date();if(d.getSeconds()!==clockSec){clockSec=d.getSeconds();$('#clock').textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;}
+  const pr=$('#prompt'),ptxt=RT.armed?`[${RT.armed[0].toUpperCase()+RT.armed.slice(1)}]>`:'[Fixture]>';if(pr.textContent!==ptxt){pr.textContent=ptxt;pr.classList.toggle('armed',!!RT.armed);}}
+function frame(){const t=now();housekeep(t);const ev=evaluate(t,true);
+  for(const fx of S.fixtures){const f=fx.id,o=ev[f];
+    if(o){RT.live[f]=o;RT.wasCtl[f]=true;}
+    else{if(RT.wasCtl[f]){RT.wasCtl[f]=false;if(!RT.blackout&&RT.live[f])RT.base[f]={dim:RT.live[f].dim,c:RT.live[f].c};}
+      const b=RT.base[f]||{dim:0,c:ctC(366)};RT.live[f]={dim:RT.blackout?0:b.dim,c:b.c,rel:true};}}
+  try{paint(t);}catch(e){console.error(e);}requestAnimationFrame(frame);}
+function selChanged(){$('#selInfo').textContent=RT.sel.length?`${RT.sel.length} selected${RT.selAll?` (${RT.selPos+1} of ${RT.selAll.length})`:''}`:'';paintPools();}
+function progTouched(){paintPools();}
+function disarm(){RT.armed=null;$$('[data-arm]').forEach(b=>b.classList.remove('on'));document.body.classList.remove('armed-store');}
+function arm(a){if(RT.armed===a){if(a==='update'){disarm();updateCue(RT.selExec);return;}disarm();return;}disarm();RT.armed=a;
+  $(`[data-arm=${a}]`).classList.add('on');if(a==='store')document.body.classList.add('armed-store');
+  msg({store:'STORE: click an executor, a cue, or a pool slot',update:'UPDATE: click a cue, or press UPDATE again for the current cue',delete:'DELETE: click a cue, executor or pool item',label:'LABEL: click an executor, cue or pool item',edit:'EDIT: click an executor, cue, effect, macro or colour'}[a],'warn');}
+function clearSmart(){if(RT.armed){disarm();msg('Disarmed');return;}doClear();}
+
+/* ---------------- modals ---------------- */
+function modal(title,html,wide){const m=$('#modal');$('.mt',m).textContent=title;const b=$('.mb',m);b.innerHTML=html;m.hidden=false;m.classList.toggle('wide',!!wide);RT.modal=true;return b;}
+function closeModal(){$('#modal').hidden=true;RT.modal=false;const f=RT.onClose;RT.onClose=null;f&&f();}
+function promptModal(title,val,cb,type='text'){modal(title,`<div class="row"><input id="pmIn" type="${type}" value="${esc(val)}" style="flex:1" step="any"></div><div class="mfoot"><button class="btn" id="pmC">Cancel</button><button class="btn pri" id="pmOk">OK</button></div>`);
+  const inp=$('#pmIn');setTimeout(()=>{inp.focus();inp.select();},0);const ok=()=>{const v=inp.value;closeModal();cb(v);};
+  $('#pmOk').onclick=ok;$('#pmC').onclick=closeModal;inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ok();}};}
+function choose(title,text,opts,cb){modal(title,`<p class="hint" style="font-size:14px">${text}</p><div class="mfoot"><button class="btn" data-ch="">Cancel</button>${opts.map(([v,l,c])=>`<button class="btn ${c||''}" data-ch="${v}">${l}</button>`).join('')}</div>`);
+  $$('[data-ch]').forEach(b=>b.onclick=()=>{closeModal();if(b.dataset.ch)cb(b.dataset.ch);});}
+function labelItem(arr,it){promptModal('Label',it.name||it.label||'',v=>{if('label' in it&&!('name' in it))it.label=v;else it.name=v;touch();});}
+
+function editEffect(slot){let d=effBySlot(slot);
+  if(!d){d=Object.assign({slot},fxDefaults(),{name:'Effect '+slot,type:'sine'});S.effects.push(d);touch();}
+  const types=[['sine','Sine (dim)'],['ramp','Ramp (dim)'],['pulse','Chase pulse (dim)'],['random','Sparkle (dim)'],['flicker','Fire flicker (dim + colour)'],['rainbow','Rainbow (colour)'],['colour2','Two-colour (colour)']];
+  const b=modal('Effect '+slot,`
+    <div class="row"><label>Name</label><input data-k="name" value="${esc(d.name)}"></div>
+    <div class="row"><label>Form</label><select data-k="type">${types.map(([v,l])=>`<option value="${v}"${d.type===v?' selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="row"><label>Speed</label><input data-k="bpm" type="number" min="0.1" max="300" step="0.1" value="${d.bpm}" style="max-width:90px"><span class="dim">BPM</span>
+      <select data-k="sm" style="max-width:150px"><option value="0"${!d.sm?' selected':''}>Own speed</option><option value="1"${d.sm==1?' selected':''}>Speed master 1</option><option value="2"${d.sm==2?' selected':''}>Speed master 2</option></select></div>
+    <div class="row" data-for="sine ramp pulse random flicker"><label>Low / High %</label><input data-k="low" type="number" min="0" max="100" value="${d.low}" style="max-width:80px"><input data-k="high" type="number" min="0" max="100" value="${d.high}" style="max-width:80px"></div>
+    <div class="row" data-for="pulse random"><label>Width %</label><input data-k="width" type="range" min="5" max="95" value="${d.width}"><span class="dim" id="wv">${d.width}</span></div>
+    <div class="row" data-for="rainbow"><label>Saturation %</label><input data-k="sat" type="range" min="0" max="100" value="${d.sat}"></div>
+    <div class="row" data-for="colour2"><label>Colours</label><input data-k="c1" type="color" value="${c2hex(d.c1)}"><input data-k="c2" type="color" value="${c2hex(d.c2)}"><label style="width:auto"><input data-k="smooth" type="checkbox"${d.smooth?' checked':''}> Smooth fade</label></div>
+    <div class="row" data-for="sine ramp pulse rainbow colour2"><label>Phase spread</label><input data-k="spread" type="range" min="0" max="720" step="15" value="${d.spread}"><span class="dim" id="spv">${d.spread}°</span></div>
+    <div class="row" data-for="sine ramp pulse rainbow colour2"><label>Blocks / Wings</label><input data-k="blocks" type="number" min="1" max="16" value="${d.blocks}" style="max-width:70px"><input data-k="wings" type="number" min="1" max="8" value="${d.wings}" style="max-width:70px"></div>
+    <canvas id="fxPrev" width="640" height="46"></canvas>
+    <div class="hint" id="fxHint"></div>
+    <div class="mfoot"><button class="btn dng" id="fxDel">Delete</button><span style="flex:1"></span><button class="btn" id="fxApply">Apply to selection</button><button class="btn pri" id="fxClose">Done</button></div>`);
+  const vis=()=>{$$('[data-for]',b).forEach(r=>r.style.display=r.dataset.for.split(' ').includes(d.type)?'':'none');
+    const per=60/(d.sm?S.sm[d.sm-1].bpm:d.bpm),n=Math.max(1,RT.sel.length||S.fixtures.length),ref=n/(+S.settings.rate||10);
+    $('#fxHint').textContent=`One cycle every ${per.toFixed(1)}s. At ${S.settings.rate} msg/s, ${n} lights get refreshed about every ${ref.toFixed(1)}s, so ${per<ref*3?'this will look steppy on real bulbs. Slow it down, or use fewer lights.':'this should look smooth.'}`;};
+  $$('[data-k]',b).forEach(inp=>inp.addEventListener('input',()=>{const k=inp.dataset.k;
+    if(inp.type==='checkbox')d[k]=inp.checked;else if(inp.type==='color')d[k]=hex2c(inp.value);else if(['name','type'].includes(k))d[k]=inp.value;else d[k]=+inp.value;
+    if(k==='width')$('#wv').textContent=inp.value;if(k==='spread')$('#spv').textContent=inp.value+'°';vis();touch(false);renderPools();}));
+  vis();$('#fxClose').onclick=closeModal;$('#fxApply').onclick=()=>{toggleEffect(slot);};
+  $('#fxDel').onclick=()=>{S.effects=S.effects.filter(x=>x!==d);RT.pfx=RT.pfx.filter(x=>x.slot!==slot);touch();closeModal();};
+  let run=true;RT.onClose=()=>{run=false;};
+  const cv=$('#fxPrev'),ctx=cv.getContext('2d');const loop=()=>{if(!run)return;const t=now(),N=16,w=cv.width/N;ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);
+    for(let i=0;i<N;i++){const r=fxValue(d,i,N,t,i+1),dim=r.dim??100,c=r.c||ctC(330);ctx.fillStyle=cCss(c,dim);ctx.globalAlpha=dim<=.4?.08:.3+.7*dim/100;
+      ctx.beginPath();ctx.arc(i*w+w/2,23,Math.min(16,w/2-3),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}requestAnimationFrame(loop);};loop();}
+function editMacro(slot){let m=slotOf(S.macros,slot);if(!m){m={slot,name:'Macro '+slot,lines:''};S.macros.push(m);touch();}
+  modal('Macro '+slot,`<div class="row"><label>Name</label><input id="mName" value="${esc(m.name)}"></div>
+    <div class="hint">One command per line, same syntax as the command line. Example: <code>Off Executor 1 Thru 10</code>, <code>Group 2 At 40 Preset 4.2</code>, <code>Goto Cue 3 Executor 1</code>.</div>
+    <textarea id="mLines" rows="7" style="width:100%">${esc(m.lines)}</textarea>
+    <div class="mfoot"><button class="btn dng" id="mDel">Delete</button><span style="flex:1"></span><button class="btn" id="mRun">Run</button><button class="btn pri" id="mOk">Done</button></div>`);
+  const save=()=>{m.name=$('#mName').value;m.lines=$('#mLines').value;touch();};
+  $('#mOk').onclick=()=>{save();closeModal();};$('#mRun').onclick=()=>{save();runMacro(m);};$('#mDel').onclick=()=>{S.macros=S.macros.filter(x=>x!==m);touch();closeModal();};}
+function editColour(slot){const it=slotOf(S.colours,slot);if(!it)return;
+  modal('Colour '+slot,`<div class="row"><label>Name</label><input id="cName" value="${esc(it.name)}"></div>
+    <div class="row"><label>Colour</label><input type="color" id="cHex" value="${c2hex(it.c)}"></div>
+    <div class="row"><label>Or white (K)</label><input type="number" id="cK" min="2000" max="6500" step="50" placeholder="e.g. 2700" value="${it.c.cm==='ct'?Math.round(1e6/it.c.ct):''}"></div>
+    <div class="mfoot"><button class="btn pri" id="cOk">Done</button></div>`);
+  $('#cHex').oninput=e=>{it.c=hex2c(e.target.value);$('#cK').value='';touch(false);renderPools();};
+  $('#cK').oninput=e=>{const k=+e.target.value;if(k>=2000&&k<=6600){it.c=ctC(1e6/k);touch(false);renderPools();}};
+  $('#cOk').onclick=()=>{it.name=$('#cName').value;touch();closeModal();};}
+function editExec(e){const ex=S.executors[e];
+  modal('Executor '+(e+1),`<div class="row"><label>Label</label><input data-k="label" value="${esc(ex.label)}"></div>
+    <div class="row"><label>Mode</label><select data-k="mode"><option value="seq"${ex.mode==='seq'?' selected':''}>Sequence (GO steps through cues with fades)</option><option value="chase"${ex.mode==='chase'?' selected':''}>Chaser (cues step automatically)</option></select></div>
+    <div class="row"><label>Chaser speed</label><input data-k="bpm" type="number" min="0.5" max="300" step="0.5" value="${ex.bpm}" style="max-width:90px"><span class="dim">BPM</span>
+      <select data-k="sm" style="max-width:160px"><option value="0"${!ex.sm?' selected':''}>Own speed</option><option value="1"${ex.sm==1?' selected':''}>Speed master 1</option><option value="2"${ex.sm==2?' selected':''}>Speed master 2</option></select></div>
+    <div class="row"><label>Chaser xfade %</label><input data-k="xfade" type="number" min="0" max="100" value="${ex.xfade}" style="max-width:90px"></div>
+    <div class="row"><label>Off fade (s)</label><input data-k="offFade" type="number" min="0" max="120" step="0.5" value="${ex.offFade}" style="max-width:90px"></div>
+    <div class="row"><label>New cue fade (s)</label><input data-k="defFade" type="number" min="0" max="600" step="0.5" value="${ex.defFade}" style="max-width:90px"></div>
+    <div class="mfoot"><button class="btn dng" id="exWipe">Delete all cues</button><span style="flex:1"></span><button class="btn pri" id="exOk">Done</button></div>`);
+  $$('[data-k]').forEach(inp=>inp.addEventListener('input',()=>{const k=inp.dataset.k;ex[k]=['label','mode'].includes(k)?inp.value:+inp.value;
+    if(k==='mode'){execOffNow(e);}touch();}));
+  $('#exOk').onclick=closeModal;$('#exWipe').onclick=()=>{choose('Delete all cues?',`Executor ${e+1} will be emptied. This cannot be undone (export your show first if unsure).`,[['y','Delete all','dng']],()=>{execOffNow(e);ex.cues=[];ex.label='';touch();});};}
+function execOffNow(e){Object.assign(RT.ex[e],{active:false,off:null,cueIdx:-1,fade:null,paused:false,cueSel:-1});}
+function openAgenda(){const draw=()=>{const b=modal('Agenda',`<div class="hint">Runs commands at set times while this page is open. Keep the tab open (a spare laptop or tablet works well).</div>
+    <table class="ptbl"><thead><tr><th>On</th><th>Time</th><th>Days</th><th>Command</th><th></th></tr></thead><tbody>${S.agenda.map((a,i)=>`<tr data-i="${i}">
+      <td><input type="checkbox" data-a="enabled"${a.enabled?' checked':''}></td><td><input type="time" data-a="time" value="${a.time}"></td>
+      <td><div class="days">${'SMTWTFS'.split('').map((l,d)=>`<button data-day="${d}" class="${a.days.includes(d)?'on':''}">${l}</button>`).join('')}</div></td>
+      <td><input data-a="cmd" value="${esc(a.cmd)}" style="width:100%"></td><td><button class="btn" data-run>Run</button> <button class="btn dng" data-del>&times;</button></td></tr>`).join('')||'<tr><td colspan="5" class="hint">No entries yet.</td></tr>'}</tbody></table>
+    <div class="mfoot"><button class="btn" id="agAdd">Add entry</button><button class="btn pri" id="agOk">Done</button></div>`,true);
+    $$('tr[data-i]',b).forEach(tr=>{const a=S.agenda[+tr.dataset.i];
+      $$('[data-a]',tr).forEach(inp=>inp.addEventListener('input',()=>{a[inp.dataset.a]=inp.type==='checkbox'?inp.checked:inp.value;touch(false);}));
+      $$('[data-day]',tr).forEach(btn=>btn.onclick=()=>{const d=+btn.dataset.day;a.days=a.days.includes(d)?a.days.filter(x=>x!==d):[...a.days,d];btn.classList.toggle('on');touch(false);});
+      $('[data-run]',tr).onclick=()=>runCommand(a.cmd);$('[data-del]',tr).onclick=()=>{S.agenda.splice(+tr.dataset.i,1);touch(false);draw();};});
+    $('#agAdd').onclick=()=>{S.agenda.push({time:'07:00',days:[1,2,3,4,5],cmd:'Goto Cue 1 Executor 1',enabled:true});touch(false);draw();};$('#agOk').onclick=closeModal;};draw();}
+function agendaTick(){const d=new Date(),hm=pad(d.getHours())+':'+pad(d.getMinutes()),key=d.toDateString()+' '+hm;
+  for(const a of S.agenda){if(!a.enabled||a.time!==hm||!a.days.includes(d.getDay())||a._last===key)continue;a._last=key;touch(false);msg('Agenda: '+a.cmd,'ok');runCommand(a.cmd);}}
+function openSetup(){const st=S.settings,demo=MODE==='demo';
+  const b=modal('Setup',`
+    <div class="sec"><h4>Hue Bridge</h4>${demo?`<div class="hint ok">You are in demo mode with virtual lights. Your real show is kept separately.</div>`:''}
+      <div class="row"><label>Bridge IP</label><input id="suIp" value="${esc(st.ip)}" placeholder="192.168.1.20"><button class="btn" id="suDisc">Discover</button></div>
+      <div id="suDiscRes" class="hint"></div>
+      <div class="row"><label></label><button class="btn" id="suTrust">Trust certificate</button><span class="hint" style="margin:0;flex:1">Needed once per browser on newer bridges. Opens the bridge in a new tab: accept the security warning there, then come back.</span></div>
+      <div class="row"><label>App key</label><input id="suUser" value="${esc(st.user)}" placeholder="created by Pair"><button class="btn" id="suPair">Pair</button></div>
+      <div id="suPairMsg" class="hint">Click Pair, then press the round link button on top of the bridge within 30 seconds. Or paste a key you created another way (see Help).</div>
+      <div class="row"><button class="btn pri" id="suConn">${demo?'Switch to my bridge':'Connect'}</button>${demo?'':'<button class="btn" id="suDemo">Try demo mode</button>'}</div></div>
+    <div class="sec"><h4>Output</h4>
+      <div class="row"><label>Max rate</label><input id="suRate" type="range" min="2" max="25" value="${st.rate}"><span id="suRateV" style="font-family:var(--fm)">${st.rate}/s</span></div>
+      <div class="hint">Philips recommends about 10 light commands per second. Higher can make the bridge drop commands.</div>
+      <div class="row"><label style="width:auto"><input type="checkbox" id="suGrp"${st.groupOpt?' checked':''}> Use Hue rooms/zones to update many lights in one command when they share a look</label></div></div>
+    <div class="sec"><h4>Show</h4>
+      <div class="row"><label>Show name</label><input id="suName" value="${esc(S.name)}"></div>
+      <div class="row"><button class="btn" id="suStarter">Rebuild starter cues</button><button class="btn" id="suGroups">Rebuild groups from rooms</button><button class="btn dng" id="suReset">Reset show</button></div>
+      <div class="hint">Starter cues fill executors 1 to 5 (House, Party, Rainbow, Movie, Fireside) from your rooms. It replaces whatever is on those executors.</div></div>
+    <div class="sec"><h4>Patch (${S.fixtures.length} lights)</h4>
+      <table class="ptbl"><thead><tr><th>No</th><th>Name</th><th>Room</th><th>Type</th><th>Hue ID</th><th>Status</th></tr></thead><tbody>${S.fixtures.map(f=>`<tr><td>${f.id}</td><td>${esc(f.name)}</td><td>${esc(f.room)}</td><td>${f.caps.color?'Colour':f.caps.ct?'White ambiance':isSwitch(f)?'On/off (plug)':'Dimmable'}</td><td>${esc(f.hueId)}</td><td style="color:${f.reachable===false?'var(--red)':'var(--grn)'}">${f.reachable===false?'unreachable':'ok'}</td></tr>`).join('')}</tbody></table></div>`,true);
+  $('#suIp').oninput=e=>{st.ip=hostOf(e.target.value);touch(false);};$('#suUser').oninput=e=>{st.user=cleanKey(e.target.value);touch(false);};
+  $('#suDisc').onclick=discover;$('#suTrust').onclick=trustBridge;$('#suPair').onclick=pair;
+  $('#suConn').onclick=()=>{closeModal();if(MODE==='demo')switchMode('real');else connect();};
+  $('#suDemo')&&($('#suDemo').onclick=()=>{closeModal();switchMode('demo');});
+  $('#suRate').oninput=e=>{st.rate=+e.target.value;$('#suRateV').textContent=st.rate+'/s';touch(false);};
+  $('#suGrp').onchange=e=>{st.groupOpt=e.target.checked;touch(false);};
+  $('#suName').oninput=e=>{S.name=e.target.value;$('#showName').textContent=S.name;touch(false);};
+  $('#suStarter').onclick=()=>choose('Rebuild starter cues?','Executors 1 to 5 will be replaced.',[['y','Rebuild','pri']],()=>{for(let e=0;e<NEX;e++)execOffNow(e);buildStarter(S);touch();msg('Starter cues built','ok');});
+  $('#suGroups').onclick=()=>{autoGroups(S);touch();msg('Groups rebuilt','ok');};
+  $('#suReset').onclick=()=>choose('Reset show?','All cues, groups, presets, effects and macros are reset. The patch is kept.',[['y','Reset','dng']],()=>{const keep={fixtures:S.fixtures,hueGroups:S.hueGroups,settings:S.settings};S=Object.assign(defaultShow(),keep);autoGroups(S);for(let e=0;e<NEX;e++)execOffNow(e);touch();});}
+function openHelp(){modal('Help',`<div class="help"><div style="float:right"><button class="btn pri" id="helpTour">Start guided tour</button></div>
+  <h4>Quick start</h4><ol>
+  <li><b>Setup</b>: enter your bridge IP (or Discover), click Pair and press the bridge button, then Connect. Lights are patched by room.</li>
+  <li><b>Select</b> fixtures by clicking tiles, a room heading, or a Group. Shift-click a tile to select a range.</li>
+  <li><b>Set a look</b> with the colour wheel, CT bar, colour presets or the DIM/HUE/SAT/CT encoders (drag up/down, scroll, or double-click to type). Red values are in the programmer.</li>
+  <li><b>Record</b>: press STORE, then click an executor header. Each store adds the next cue. Click a cue row with STORE armed to merge or overwrite it.</li>
+  <li><b>Play back</b> with GO / GO- on the executor. The fader is that executor's intensity master. OFF fades it out.</li>
+  <li><b>CLEAR</b> drops the selection, then the programmer. Lights hold where they are when nothing controls them.</li></ol>
+  <h4>Command line</h4><table>
+  <tr><td><code>1 thru 8 at 50</code></td><td>Select fixtures 1 to 8, dim to 50%</td></tr>
+  <tr><td><code>1 thru 10 - 4 at full</code></td><td>1 to 10 except 4, full</td></tr>
+  <tr><td><code>group 2 preset 4.3</code></td><td>Group 2 to colour preset 3 (<code>preset 1.n</code> = dimmer 0/10/25/50/75/100)</td></tr>
+  <tr><td><code>hue 200 sat 80</code> / <code>ct 2700</code></td><td>Colour on the selection (CT in Kelvin or mireds)</td></tr>
+  <tr><td><code>at +10</code> / <code>at - 10</code></td><td>Relative dimmer change</td></tr>
+  <tr><td><code>effect 3</code> / <code>effect off</code></td><td>Toggle effect 3 on the selection</td></tr>
+  <tr><td><code>store</code> / <code>store cue 4 exec 2 /merge</code></td><td>Record programmer as a cue</td></tr>
+  <tr><td><code>update</code></td><td>Merge programmer into the selected or current cue</td></tr>
+  <tr><td><code>go exec 1</code>, <code>go- exec 1</code>, <code>off exec 1 thru 10</code></td><td>Playback</td></tr>
+  <tr><td><code>goto cue 3 exec 1</code></td><td>Jump to a cue</td></tr>
+  <tr><td><code>exec 2 at 60</code>, <code>gm at 80</code></td><td>Executor fader / grand master</td></tr>
+  <tr><td><code>sm 1 at 128</code>, <code>fade 3</code></td><td>Speed master BPM, programmer fade time</td></tr>
+  <tr><td><code>label cue 2 exec 1 "Dinner"</code></td><td>Name things (also group, scene, macro, preset)</td></tr>
+  <tr><td><code>delete cue 2 exec 1</code></td><td>Delete things</td></tr>
+  <tr><td><code>macro 1</code>, <code>scene 2</code>, <code>blackout</code>, <code>highlight</code>, <code>blind</code>, <code>release</code></td><td>Misc. Separate commands with <code>;</code></td></tr></table>
+  <h4>Keyboard</h4><ul><li>Start typing anywhere to use the command line. Enter runs it, arrow keys recall history.</li><li><b>Space</b> GO on the selected executor, <b>Esc</b> CLEAR or disarm, <b>Ctrl+Z</b> OOPS.</li></ul>
+  <h4>Executors</h4><ul><li><b>Sequence</b>: cues track (values carry forward until changed), each with its own fade and delay.</li>
+  <li><b>Chaser</b>: cues step automatically at the executor's BPM or a speed master, with crossfade %. GO starts, PAUSE holds, GO while paused steps.</li>
+  <li><b>Flash</b>: momentary full. Intensity is highest-takes-precedence across executors, colour is latest-takes-precedence, the programmer always wins.</li>
+  <li>Moving a fader up from zero starts that executor.</li></ul>
+  <h4>Effects</h4><p>Click an effect with fixtures selected to run it in the programmer, then STORE it into a cue. Phase spread fans the effect across the selection in selection order; blocks group neighbours, wings mirror it. Link the speed to a speed master and TAP to the music.</p>
+  <h4>About speed on real Hue bulbs</h4><p>The bridge accepts about 10 commands per second. HueDesk predicts each light's state slightly ahead and lets the bulb's own transition fill the gap, so fades look smooth, and it uses one room command when a whole room shares a look. Fast effects across many bulbs will still look steppy. The OUT meter shows the send rate and Q the lights waiting for an update. The bottom strip on each tile shows what the bulb itself is doing.</p>
+  <h4>Browser notes</h4><ul>
+  <li><b>Can't connect?</b> Newer bridges only accept secure connections with a certificate browsers don't recognise. In Setup, use <b>Trust certificate</b> and accept the warning in the new tab (once per browser), then Pair or Connect again.</li>
+  <li><b>Pair doesn't work?</b> Create the key with the bridge's own debugger at <code>https://&lt;bridge-ip&gt;/debug/clip.html</code> and paste it into App key. The README has step-by-step instructions and a command-line alternative.</li>
+  <li>If the bridge is still unreachable when this is opened as a file, serve the folder instead, for example <code>npx serve</code>, <code>python -m http.server</code> or <code>dotnet serve</code>, and open it via <code>http://localhost</code>. Allow local network access if the browser asks.</li>
+  <li>Keep the tab visible (or in its own window) for smooth output. Background tabs are throttled by the browser.</li>
+  <li>The show saves automatically in this browser. Use Export for a backup or to move it to another machine.</li></ul></div>`,true);$('#helpTour').onclick=()=>{closeModal();startTour(true);};}
+function openWelcome(){modal('Welcome',`<div class="welcome"><h2>HUE<span style="color:var(--amb)">DESK</span></h2>
+  <p>A lighting console for your Philips Hue lights, built like a theatre desk: fixtures, groups, presets, effects, cue stacks and executors.</p>
+  <button class="btn pri" id="wcSetup">Connect my Hue Bridge</button><button class="btn" id="wcDemo">Explore in demo mode</button></div>`);
+  $('#wcSetup').onclick=()=>{closeModal();openSetup();};$('#wcDemo').onclick=()=>{closeModal();switchMode('demo');};}
+
+/* ---------------- events ---------------- */
+function bind(){
+  $('.mx').onclick=closeModal;$('#modal').addEventListener('pointerdown',e=>{if(e.target.id==='modal')closeModal();});
+  $$('[data-act]').forEach(b=>b.onclick=()=>({setup:openSetup,agenda:openAgenda,help:openHelp,export:exportShow,import:()=>$('#importFile').click()})[b.dataset.act]());
+  $('#showName').onclick=()=>promptModal('Show name',S.name,v=>{S.name=v||S.name;touch();});
+  $('#importFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=migrate(JSON.parse(r.result));
+    const keep={settings:S.settings};S=Object.assign(j,keep);for(let x=0;x<NEX;x++)execOffNow(x);touch();connect();msg('Show imported','ok');}catch(err){msg('Import failed: '+err.message,'err');}};r.readAsText(f);e.target.value='';};
+  $$('.tabs button').forEach(b=>b.onclick=()=>{RT.view=b.dataset.view;$$('.tabs button').forEach(x=>x.classList.toggle('on',x===b));$('#fixGrid').hidden=RT.view!=='grid';$('#fixSheet').hidden=RT.view!=='sheet';});
+  $('#fixGrid').addEventListener('click',e=>{const rh=e.target.closest('.roomh');
+    if(rh){const fs=S.fixtures.filter(f=>(f.room||'Unassigned')===rh.dataset.room).map(f=>f.id);setSel(e.shiftKey||e.ctrlKey?[...RT.sel,...fs]:fs);return;}
+    const t=e.target.closest('.fx');if(!t)return;const f=+t.dataset.f;
+    if(e.shiftKey&&RT.lastClick!=null){const ids=S.fixtures.map(x=>x.id),a=ids.indexOf(RT.lastClick),b=ids.indexOf(f);const rng=ids.slice(Math.min(a,b),Math.max(a,b)+1);if(a>b)rng.reverse();setSel([...RT.sel,...rng]);}
+    else toggleSel(f);RT.lastClick=f;});
+  $('#fixSheet').addEventListener('click',e=>{const tr=e.target.closest('tr[data-f]');if(tr)toggleSel(+tr.dataset.f);});
+  $('#pools').addEventListener('click',e=>{const t=e.target.closest('.pt');if(t)poolClick(t.dataset.p,+t.dataset.s,e);});
+  $('#cueBody').addEventListener('click',e=>{const tr=e.target.closest('tr[data-i]');if(!tr)return;const i=+tr.dataset.i,ex=S.executors[RT.selExec],c=ex.cues[i],a=RT.armed;
+    if(a){disarm();if(a==='store')storeCue(RT.selExec,c.num);else if(a==='update')updateCue(RT.selExec,i);else if(a==='delete')deleteCue(RT.selExec,i);
+      else if(a==='label')promptModal(`Label cue ${fmtNum(c.num)}`,c.name,v=>{c.name=v;touch();});else if(a==='edit')loadCue(RT.selExec,i);return;}
+    RT.ex[RT.selExec].cueSel=i;$$('#cueBody tr').forEach(r=>r.classList.toggle('csel',r===tr));});
+  $('#cueBody').addEventListener('dblclick',e=>{const td=e.target.closest('[data-ed]'),tr=e.target.closest('tr[data-i]');if(!td||!tr)return;
+    const c=S.executors[RT.selExec].cues[+tr.dataset.i],k=td.dataset.ed,inp=document.createElement('input');inp.className='inl';inp.value=k==='name'?c.name:c[k]||0;
+    td.replaceChildren(inp);inp.focus();inp.select();let done=false;const fin=ok=>{if(done)return;done=true;if(ok){c[k]=k==='name'?inp.value:Math.max(0,+inp.value||0);touch();}else renderCues();};
+    inp.onkeydown=ev=>{ev.stopPropagation();if(ev.key==='Enter')fin(true);if(ev.key==='Escape')fin(false);};inp.onblur=()=>fin(true);});
+  $$('[data-cue]').forEach(b=>b.onclick=()=>{const e=RT.selExec,xr=RT.ex[e],ex=S.executors[e],a=b.dataset.cue;
+    if(a==='goto'){if(xr.cueSel<0)return msg('Click a cue row first','warn');execGo(e,xr.cueSel);}
+    if(a==='load')loadCue(e,xr.cueSel>=0?xr.cueSel:xr.cueIdx);if(a==='update')updateCue(e);if(a==='cfg')editExec(e);});
+  $('#execRow').addEventListener('click',e=>{const ex=e.target.closest('.exec');if(!ex)return;const n=+ex.dataset.e,btn=e.target.closest('[data-x]'),a=RT.armed;
+    if(a){disarm();if(a==='store')storeCue(n,null);else if(a==='update')updateCue(n);
+      else if(a==='delete'){if(S.executors[n].cues.length)choose(`Delete executor ${n+1}?`,'All its cues will be removed.',[['y','Delete','dng']],()=>{execOffNow(n);S.executors[n]=newExec();touch();});}
+      else if(a==='label')promptModal(`Label executor ${n+1}`,S.executors[n].label,v=>{S.executors[n].label=v;touch();});else if(a==='edit')editExec(n);return;}
+    if(btn){const x=btn.dataset.x;if(x==='go')execGo(n);else if(x==='b2')execBack(n);else if(x==='off')execOff(n);return;}
+    if(e.target.closest('.exh')){RT.selExec=n;renderCues();}});
+  $('#execRow').addEventListener('dblclick',e=>{const h=e.target.closest('.exh');if(h)editExec(+h.closest('.exec').dataset.e);});
+  $$('[data-arm]').forEach(b=>b.onclick=()=>arm(b.dataset.arm));
+  const C={oops,clear:clearSmart,highlight:()=>RT.highlight=!RT.highlight,blind:()=>RT.blind=!RT.blind,all:selectAll,odd:()=>selOddEven(true),even:()=>selOddEven(false),
+    prev:()=>selStep(-1),next:()=>selStep(1),ko:knockout,fxoff:()=>{if(needSel()){pushOops();removeProgFx(RT.sel);progTouched();}},invert:invertSel};
+  $$('[data-cmd]').forEach(b=>b.onclick=()=>C[b.dataset.cmd]());
+  $('[data-cmd=clear]').ondblclick=clearAll;
+  $('#alignBtn').onclick=()=>{RT.align=(RT.align+1)%4;};
+  $('#dimBtns').innerHTML=['0','25','50','75','FULL','-10','+10','10'].map(v=>`<button data-dim="${v}">${v==='FULL'?'FULL':v.match(/^[+-]/)?v:v+'%'}</button>`).join('');
+  $$('[data-dim]').forEach(b=>b.onclick=()=>{const v=b.dataset.dim;if(v==='FULL')setDimSel(100);else if(/^[+-]/.test(v))setDimSel(+v,true);else setDimSel(+v);});
+  const wheel=$('#wheel');let wd=false;const wpick=e=>{const r=wheel.getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,R=r.width/2-2;
+    applyColour(hsC((Math.atan2(y,x)*180/Math.PI+360)%360,clamp(Math.hypot(x,y)/R*100,0,100)),true);};
+  wheel.addEventListener('pointerdown',e=>{wd=true;wheel.setPointerCapture(e.pointerId);RT.oopsT=0;wpick(e);});wheel.addEventListener('pointermove',e=>{if(wd)wpick(e);});wheel.addEventListener('pointerup',()=>wd=false);
+  const ctb=$('#ctbar');let cd=false;const cpick=e=>{const r=ctb.getBoundingClientRect();applyColour(ctC(153+347*clamp((e.clientY-r.top)/r.height,0,1)),true);};
+  ctb.addEventListener('pointerdown',e=>{cd=true;ctb.setPointerCapture(e.pointerId);RT.oopsT=0;cpick(e);});ctb.addEventListener('pointermove',e=>{if(cd)cpick(e);});ctb.addEventListener('pointerup',()=>cd=false);
+  makeFader($('#gmFader'),{get:()=>RT.gm,set:v=>RT.gm=v});
+  $$('.sm').forEach((el,i)=>{$$('[data-smact]',el).forEach(b=>b.onclick=()=>{const a=b.dataset.smact,sm=S.sm[i];
+      if(a==='half')sm.bpm=Math.max(.5,sm.bpm/2);if(a==='dbl')sm.bpm=Math.min(300,sm.bpm*2);
+      if(a==='tap'){const t=now(),T=RT.taps[i];if(T.length&&t-T[T.length-1]>2500)T.length=0;T.push(t);if(T.length>6)T.shift();
+        if(T.length>=2){sm.bpm=clamp(Math.round(60000/((T[T.length-1]-T[0])/(T.length-1))*10)/10,1,300);RT.smPh[i]=Math.floor(smPhase(i,t));RT.smT=t;}}
+      touch(false);});
+    const v=$('.smv',el);let y=0,d=false;
+    v.addEventListener('pointerdown',e=>{d=true;y=e.clientY;v.setPointerCapture(e.pointerId);});
+    v.addEventListener('pointermove',e=>{if(!d)return;const s=S.sm[i];s.bpm=clamp(Math.round((s.bpm+(y-e.clientY)*(s.bpm<20?.1:.5))*10)/10,.5,300);y=e.clientY;});
+    v.addEventListener('pointerup',()=>{d=false;touch(false);});
+    v.addEventListener('wheel',e=>{e.preventDefault();const s=S.sm[i];s.bpm=clamp(s.bpm+(e.deltaY<0?1:-1)*(s.bpm<20?.5:1),.5,300);touch(false);},{passive:false});});
+  $('#boBtn').onclick=()=>setBlackout(!RT.blackout);$('#releaseBtn').onclick=releaseAll;
+  const ci=$('#cmdIn');
+  ci.addEventListener('keydown',e=>{e.stopPropagation();
+    if(e.key==='Enter'){const v=ci.value.trim();if(v){RT.hist.push(v);RT.histI=RT.hist.length;try{runCommand(v);}catch(err){msg('Error: '+err.message,'err');}}ci.value='';}
+    else if(e.key==='Escape'){if(ci.value)ci.value='';else{ci.blur();clearSmart();}}
+    else if(e.key==='ArrowUp'){if(RT.hist.length){RT.histI=Math.max(0,RT.histI-1);ci.value=RT.hist[RT.histI];e.preventDefault();}}
+    else if(e.key==='ArrowDown'){RT.histI=Math.min(RT.hist.length,RT.histI+1);ci.value=RT.hist[RT.histI]||'';e.preventDefault();}});
+  document.addEventListener('keydown',e=>{
+    if(RT.tour){if(e.key==='Escape')endTour();else if(e.key==='ArrowRight'||(e.key==='Enter'&&e.target.tagName!=='BUTTON'))tourGo(1);else if(e.key==='ArrowLeft')tourGo(-1);else return;e.preventDefault();return;}
+    if(RT.modal){if(e.key==='Escape')closeModal();return;}
+    if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''))return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();oops();return;}
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
+    if(e.key===' '){e.preventDefault();execGo(RT.selExec);return;}
+    if(e.key==='Escape'){clearSmart();return;}
+    if(e.key.length===1)ci.focus();});
+}
+function poolClick(k,s,ev){const it=slotOf(S[k],s),a=RT.armed;
+  if(a){disarm();
+    if(a==='store')return storeToPool(k,s);
+    if(a==='delete'){if(it){S[k]=S[k].filter(x=>x!==it);if(k==='effects')RT.pfx=RT.pfx.filter(x=>x.slot!==s);touch();msg(`Deleted ${it.name}`,'ok');}return;}
+    if(a==='label'){if(it)labelItem(S[k],it);return;}
+    if(a==='edit'){if(k==='effects')return editEffect(s);if(k==='macros')return editMacro(s);if(k==='colours'&&it)return editColour(s);if(it)labelItem(S[k],it);return;}
+    if(a==='update'){msg('UPDATE works on cues','warn');return;}}
+  if(!it){if(k==='effects')return editEffect(s);if(k==='macros')return editMacro(s);msg(`Empty slot. Press STORE then click here to record a ${k.slice(0,-1)}.`,'warn');return;}
+  if(k==='groups')selectGroup(it,ev.shiftKey||ev.ctrlKey);
+  else if(k==='colours')applyColour(it.c);
+  else if(k==='effects')toggleEffect(s);
+  else if(k==='scenes')applyScene(it);
+  else if(k==='macros')runMacro(it);}
+function exportShow(){const out=JSON.parse(JSON.stringify(S));out.settings={...out.settings,ip:'',user:''};/* never export the bridge address or app key */
+  const blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=`huedesk-${(S.name||'show').replace(/[^\w-]+/g,'_')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);msg('Show exported','ok');}
+function startTicker(fn,ms){try{const w=new Worker(URL.createObjectURL(new Blob([`setInterval(()=>postMessage(0),${ms})`],{type:'text/javascript'})));w.onmessage=fn;return;}catch(e){}setInterval(fn,ms);}
+
+
+/* ---------------- guided tour ---------------- */
+const TOUR=[
+ {t:'Welcome to HueDesk',b:()=>`<p>HueDesk is a lighting console for Philips Hue, laid out like a professional theatre lighting desk.</p>
+   <p>This tour points at each part of the screen and explains what it does and how the parts work together. It takes about three minutes.</p>
+   ${MODE==='demo'?`<p>You are in <b>demo mode</b>: ${S.fixtures.length} virtual lights in a pretend house. Nothing in your real home will change, so experiment freely.</p>`:'<p>Your bridge is connected. Nothing changes in the house until you set values or press GO.</p>'}
+   <p>Use <b>Next</b> or the arrow keys. You can replay this tour any time from <b>Help</b>.</p>`},
+ {sel:'#top .stat',grow:'#top .meter',pad:6,t:'Bridge and output status',b:()=>`<p>The light shows the connection: <b>green</b> connected, <b>cyan</b> demo, <b>amber</b> connecting, <b>red</b> a problem.</p>
+   <p><b>OUT</b> is how many commands per second are going to the bridge (Hue allows about 10). <b>Q</b> is how many lights are waiting for an update. If Q stays high, your effects are faster than Hue can keep up with.</p>`},
+ {sel:'#top [data-act=agenda]',grow:'#top [data-act=help]',t:'Agenda, Setup, Export, Import, Help',b:()=>`<ul>
+   <li><b>Agenda</b> runs commands at set times of day, like "Morning at 07:00 on weekdays".</li>
+   <li><b>Setup</b> pairs the bridge, sets the output rate, renames the show and lists your patched lights.</li>
+   <li><b>Export / Import</b> save and load the whole show as a file. The show also saves itself in this browser.</li>
+   <li><b>Help</b> has the command reference and this tour.</li></ul>`},
+ {sel:'#fixtures',t:'Fixtures',b:()=>`<p>Every Hue light is a <b>fixture</b> with a number, grouped by room.</p>
+   <ul><li><b>Click</b> a tile to select it (yellow border). Click again to deselect.</li>
+   <li><b>Shift-click</b> selects a range. Click a <b>room heading</b> to select the whole room.</li>
+   <li>The tile colour is what the desk is sending. The thin strip at the bottom is what the bulb is actually doing right now.</li>
+   <li>A <span style="background:var(--red);color:#fff;padding:0 3px;border-radius:2px">red</span> number means that light has a value in the programmer. <b>FX</b> means an effect is running on it. Plugs show ON or OFF.</li>
+   <li><b>Sheet</b> shows the same lights as a table, with the source controlling each one.</li></ul>`},
+ {sel:'#prog .pgtop',t:'The programmer: colour',b:()=>`<p>The <b>programmer</b> is your scratch pad. Whatever you set here goes straight to the selected lights and always wins over playback.</p>
+   <ul><li>Click or drag the <b>colour wheel</b> for colour (centre is white, edge is saturated).</li>
+   <li>The <b>bar</b> beside it is white colour temperature: cool at the top, warm at the bottom.</li>
+   <li>The <b>readout</b> shows the first selected light: its output, and what is controlling it.</li>
+   <li>The <b>buttons</b> set intensity quickly: 0 to FULL, or nudge by 10.</li></ul>`},
+ {sel:'#prog .encs',t:'Encoders',b:()=>`<p>The five dials adjust the selection:</p>
+   <ul><li><b>DIM</b> intensity, <b>HUE</b> and <b>SAT</b> colour, <b>CT</b> white temperature.</li>
+   <li><b>FADE</b> is the programmer fade time: how long your changes take to arrive.</li>
+   <li><b>Drag</b> up or down, or <b>scroll</b>. Hold <b>Shift</b> for fine control. <b>Double-click</b> to type an exact value.</li>
+   <li>Red values are in the programmer. White values are just what the light is currently showing.</li></ul>`},
+ {sel:'#prog .pgbtns',t:'Programmer tools',b:()=>`<ul><li><b>ALIGN</b> fans values across the selection as you turn a dial: <code>&gt;</code> builds up from first to last, <code>&lt;</code> the reverse, <code>&gt;&lt;</code> out from the middle. Great for gradients.</li>
+   <li><b>KNOCKOUT</b> removes the selected lights from the programmer.</li>
+   <li><b>FX OFF</b> stops programmer effects on the selection.</li>
+   <li><b>INVERT</b> swaps the selection for every other light.</li></ul>`},
+ {sel:'#pool-groups',t:'Groups',b:()=>`<p>A <b>group</b> is a saved selection. Your Hue rooms are added automatically.</p>
+   <ul><li>Click to select that group, Shift-click to add it to the current selection.</li>
+   <li>To make your own: select lights, press <b>STORE</b>, then click an empty slot.</li></ul>`},
+ {sel:'#pool-colours',t:'Colour presets',b:()=>`<p>One click applies a colour to the selected lights. White-only lights take the nearest white; plain dimmable lights and plugs ignore colour.</p>
+   <p>Store your own the same way: set a colour, <b>STORE</b>, click a slot. <b>EDIT</b> then a preset lets you pick its colour or Kelvin value.</p>`},
+ {sel:'#pool-effects',t:'Effects',b:()=>`<p>Effects move the lights for you: breathe, wave, chase, sparkle, fire, rainbow and two-colour fades.</p>
+   <ul><li>Select lights and click an effect to start it. Click again to stop.</li>
+   <li><b>Phase spread</b> fans it across your selection in the order you selected, so 360&deg; makes one full wave across the room.</li>
+   <li>Click an empty slot (or <b>EDIT</b> then an effect) to open the editor with a live preview.</li>
+   <li>Effects can follow a <b>speed master</b> so you can tap them to music.</li></ul>`},
+ {sel:'#pool-scenes',grow:'#pool-macros',t:'Scenes and macros',b:()=>`<ul><li>A <b>scene</b> is a saved look for specific lights. Clicking it loads it into the programmer so you can tweak it or store it into a cue.</li>
+   <li>A <b>macro</b> is a list of commands run with one click, for example "turn everything off" or "go to the evening cue". Click an empty slot to write one.</li></ul>`},
+ {sel:'#execs',t:'Executors: where playback happens',b:()=>`<p>Each of the 10 <b>executors</b> holds a list of cues and plays them back.</p>
+   <ul><li><b>GO</b> fades to the next cue, <b>GO-</b> goes back one, <b>OFF</b> fades the executor out, <b>FLASH</b> is full while held.</li>
+   <li>The <b>fader</b> is that executor's intensity master. Pushing it up from zero starts it.</li>
+   <li>The header shows the current cue in green, the next cue, and a fade bar. <b>Click</b> it to select the executor, <b>double-click</b> for its settings.</li>
+   <li><b>SEQ</b> executors step through cues on GO. <b>CHS</b> (chaser) executors step on their own at a set speed.</li></ul>
+   ${MODE==='demo'?'<p>After the tour, try <b>GO</b> on executor 1 (House) a few times, then <b>GO</b> on Party.</p>':''}`},
+ {sel:'#cues',t:'Cue list',b:()=>`<p>The cues of the selected executor. <span style="color:var(--grn)">&#9654;</span> marks the live cue; an outlined arrow means it is still fading in.</p>
+   <ul><li>Click a row to select it, then <b>GOTO</b> to jump there, or <b>LOAD</b> to pull it into the programmer for editing.</li>
+   <li><b>Double-click</b> a name, fade or delay to change it.</li>
+   <li>Cues <b>track</b>: a light keeps its value from an earlier cue until a later cue changes it.</li></ul>`},
+ {sel:'#masters',t:'Masters',b:()=>`<ul><li><b>GRAND</b> scales the intensity of everything.</li>
+   <li><b>SPEED 1 / 2</b> are speed masters in BPM. <b>TAP</b> to the beat, halve or double it, or drag the number. Effects and chasers can be linked to them.</li>
+   <li><b>BLACKOUT</b> kills every light at once. Press again to bring them back.</li>
+   <li><b>RELEASE ALL</b> turns off every executor and clears the programmer. Lights stay where they are.</li></ul>`},
+ {sel:'.keys .k[data-arm=store]',grow:'.keys .k[data-arm=edit]',t:'Store, Update, Delete, Label, Edit',b:()=>`<p>These keys work like a real desk: press one to <b>arm</b> it (it lights up), then click what it should act on.</p>
+   <ul><li><b>STORE</b> then an executor header records the programmer as the next cue. Then a cue row: merge into or overwrite it. Then a pool slot: saves a group, colour or scene.</li>
+   <li><b>UPDATE</b> then a cue merges your changes into it. Press UPDATE twice for the current cue.</li>
+   <li><b>DELETE</b>, <b>LABEL</b> (rename) and <b>EDIT</b> (open settings) work the same way.</li></ul>
+   <p>Esc or CLEAR disarms.</p>`},
+ {sel:'.keys .k[data-cmd=oops]',grow:'.keys .k[data-cmd=next]',t:'Programmer and selection keys',b:()=>`<ul><li><b>OOPS</b> undoes the last programmer change (Ctrl+Z).</li>
+   <li><b>CLEAR</b> first clears the selection, then the programmer. Double-click for both. When nothing controls a light it simply stays as it is.</li>
+   <li><b>HIGHLT</b> turns the selection full white so you can find it. <b>BLIND</b> lets you build a look without it reaching the lights.</li>
+   <li><b>ALL</b>, <b>ODD</b>, <b>EVEN</b> select lights. <b>NEXT / PREV</b> step through the selection one light at a time; ALL brings the full selection back.</li></ul>`},
+ {sel:'#cmd .cl',t:'Command line',b:()=>`<p>Everything can be typed. Just start typing anywhere and press Enter.</p>
+   <ul><li><code>1 thru 8 at 50</code> lights 1 to 8 at 50%</li>
+   <li><code>group 2 preset 4.3</code> group 2 to colour preset 3</li>
+   <li><code>store</code>, <code>go exec 1</code>, <code>goto cue 3 exec 1</code></li></ul>
+   <p>Up and down arrows recall earlier commands. <b>Space</b> presses GO on the selected executor. The full list is in Help.</p>`},
+ {t:'Your first cue',b:()=>`<p>Putting it together:</p>
+   <ol style="margin:0 0 8px;padding-left:20px"><li>Click a <b>room heading</b> to select its lights.</li>
+   <li>Click a <b>colour</b> and press <b>75%</b>.</li>
+   <li>Press <b>STORE</b>, then click the header of an <b>empty executor</b>.</li>
+   <li>Press <b>CLEAR</b> twice. The look is now saved as cue 1.</li>
+   <li>Change the look and <b>STORE</b> on the same executor again for cue 2.</li>
+   <li>Press <b>GO</b> on that executor to fade between them.</li></ol>
+   <p>Double-click a cue's fade time to make it slower or faster. Have fun.</p>`}];
+let tourI=0;
+const TOUR_DEMO_KEY='huedesk.tour.demoHide',TOUR_REAL_KEY='huedesk.tour.realDone';
+function tourWanted(){if(MODE==='demo')return store.get(TOUR_DEMO_KEY)!=='1';return !!(S.settings.ip&&S.settings.user)&&store.get(TOUR_REAL_KEY)!=='1';}
+function startTour(force){if(RT.tour)return;if(!force&&!tourWanted())return;if(RT.modal)closeModal();disarm();
+  RT.tour=true;tourI=0;if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  if(MODE!=='demo')store.set(TOUR_REAL_KEY,'1');
+  $('#tourNo').checked=store.get(TOUR_DEMO_KEY)==='1';$('#tour .tno').hidden=MODE!=='demo';
+  $('#tour').hidden=false;$('#tour .tdots').innerHTML=TOUR.map(()=>'<i></i>').join('');showStep();}
+function endTour(){RT.tour=false;$('#tour').hidden=true;}
+function tourGo(d){const n=tourI+d;if(n<0)return;if(n>=TOUR.length){endTour();return;}tourI=n;showStep();}
+function tourRect(st){if(!st.sel)return null;const a=$(st.sel);if(!a)return null;let r=a.getBoundingClientRect();
+  if(st.grow){const b=$(st.grow);if(b){const q=b.getBoundingClientRect();r={left:Math.min(r.left,q.left),top:Math.min(r.top,q.top),right:Math.max(r.right,q.right),bottom:Math.max(r.bottom,q.bottom)};}}
+  const p=st.pad??4;return {left:r.left-p,top:r.top-p,right:r.right+p,bottom:r.bottom+p,width:r.right-r.left+2*p,height:r.bottom-r.top+2*p};}
+function showStep(){const st=TOUR[tourI];
+  $('#tour .tstep').textContent=`STEP ${tourI+1} OF ${TOUR.length}`;
+  $$('#tour .tdots i').forEach((d,i)=>d.classList.toggle('on',i<=tourI));
+  $('#tour h3').textContent=st.t;$('#tour .tbody').innerHTML=st.b();
+  $('#tourBack').disabled=tourI===0;$('#tourBack').style.opacity=tourI===0?.4:1;
+  $('#tourNext').textContent=tourI===TOUR.length-1?'Finish':'Next';
+  placeStep();$('#tourNext').focus({preventScroll:true});}
+function placeStep(){if(!RT.tour)return;const st=TOUR[tourI],card=$('#tour .tcard'),spot=$('#tour .tspot'),r=tourRect(st);
+  const W=innerWidth,H=innerHeight,cw=card.offsetWidth,ch=card.offsetHeight,m=12;
+  if(!r){spot.classList.add('none');Object.assign(spot.style,{left:W/2+'px',top:H/2+'px',width:'0px',height:'0px'});
+    card.style.left=Math.max(m,(W-cw)/2)+'px';card.style.top=Math.max(m,(H-ch)/2)+'px';return;}
+  spot.classList.remove('none');Object.assign(spot.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+  const opts=[{x:r.right+m,y:r.top,fit:W-r.right-m>=cw+m},{x:r.left-cw-m,y:r.top,fit:r.left-m>=cw+m},
+    {x:r.left,y:r.bottom+m,fit:H-r.bottom-m>=ch+m},{x:r.left,y:r.top-ch-m,fit:r.top-m>=ch+m}];
+  const o=opts.find(x=>x.fit)||{x:(W-cw)/2,y:(H-ch)/2};
+  card.style.left=clamp(o.x,m,W-cw-m)+'px';card.style.top=clamp(o.y,m,H-ch-m)+'px';}
+function bindTour(){$('#tourNext').onclick=()=>tourGo(1);$('#tourBack').onclick=()=>tourGo(-1);$('#tourSkip').onclick=endTour;
+  $('#tourNo').onchange=e=>store.set(TOUR_DEMO_KEY,e.target.checked?'1':'0');
+  window.addEventListener('resize',placeStep);}
+
+/* ---------------- init ---------------- */
+function init(){MODE=store.get('huedesk.mode')==='demo'?'demo':'real';S=loadShow();
+  buildEncoders();drawWheelBase();bind();bindTour();renderAll();OUT.lastT=now();RT.smT=now();
+  startTicker(schedTick,20);setInterval(agendaTick,10000);window.addEventListener('beforeunload',saveShow);
+  requestAnimationFrame(frame);
+  if(MODE==='demo'||(S.settings.ip&&S.settings.user))connect();else openWelcome();}
+init();
+</script>
+</body>
+</html>
